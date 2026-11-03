@@ -1,0 +1,31 @@
+# SEO Hub Analyzer
+
+An SEO analysis workspace that audits technical SEO, on-page structure, performance, and usability, then turns findings into prioritized fixes.
+
+## About
+Users simply enter a URL, and the platform analyzes key SEO factors like technical setup, on-page elements, performance metrics, and user experience. It then highlights issues, explains their impact, and provides step-by-step fixes.
+
+The goal is not just to show problems, but to help users understand and fix them quickly.
+
+## Public Endpoints
+- / : Landing page and primary URL entry
+- /about : About SEO Hub Analyzer
+- /overview : Platform overview
+- /capabilities : Detailed features and analysis capabilities
+- /workflow : How the auditing workflow operates
+- /pricing : Pricing plans
+- /docs : Documentation and guides
+- /api-reference : API details for developers
+- /case-studies : Success stories
+- /sample-report : Example of an SEO audit report
+- /blog : Educational content on SEO
+- /support : Support and help center
+- /privacy : Privacy Policy
+- /terms : Terms of Service
+
+## Disallowed Endpoints
+- /admin : Administrative dashboard
+- /dashboard : User dashboard (requires authentication)
+- /report : Dynamic SEO report content
+
+For more information, please navigate through the site structure or consult the /docs page.

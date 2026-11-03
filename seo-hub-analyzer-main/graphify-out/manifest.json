@@ -1,0 +1,342 @@
+{
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\eslint.config.js": {
+    "mtime": 1776920679.3406436,
+    "hash": "31c0881fdd8500aa4d0aa963079713ae"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\postcss.config.js": {
+    "mtime": 1776920679.3757188,
+    "hash": "c735540bb63936a123bc867d950c9f69"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\tailwind.config.ts": {
+    "mtime": 1776920679.3828025,
+    "hash": "b746c44a59eb46296e85f13135b15924"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\vite.config.ts": {
+    "mtime": 1776920679.4116628,
+    "hash": "9b0e06c88c24cd440aac4cc574fc3bbf"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\vitest.config.ts": {
+    "mtime": 1776920679.416663,
+    "hash": "9285ab80c07d5cd1a71aa20c1687352a"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\scripts\\generate-sitemap.mjs": {
+    "mtime": 1777107768.9853578,
+    "hash": "18d11d328fb82b01f2d1b812753da093"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\App.tsx": {
+    "mtime": 1776920679.468572,
+    "hash": "ad3f32bc657c9a7076f44c534e694a22"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\main.tsx": {
+    "mtime": 1776920679.484125,
+    "hash": "092c6937f28c1dff19a7d561f5f98360"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\vite-env.d.ts": {
+    "mtime": 1776920679.4906516,
+    "hash": "0352474ba2918efe13895edbc3780d94"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\NavLink.tsx": {
+    "mtime": 1776920679.4991558,
+    "hash": "8f7c178b4776787e58e1011855ca28f6"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\seohub\\DemoReport.tsx": {
+    "mtime": 1777007973.8215327,
+    "hash": "7b8da1ec9b26ac1385fa7e24fb598ce4"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\seohub\\Features.tsx": {
+    "mtime": 1777008468.5207722,
+    "hash": "102f5ef9b9c6f4ce79ab3d3e77fc82cf"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\seohub\\FinalCta.tsx": {
+    "mtime": 1777008497.6883318,
+    "hash": "5ac0af3e5aaf06761fa6c00369551f3b"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\seohub\\Footer.tsx": {
+    "mtime": 1777108747.2294579,
+    "hash": "cdd99fa1abc420f84b93424070aa4ddc"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\seohub\\Hero.tsx": {
+    "mtime": 1777008456.9746737,
+    "hash": "d7a927eb5014860636a28b3a1969e5ed"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\seohub\\HowItWorks.tsx": {
+    "mtime": 1777008462.5964792,
+    "hash": "744c9586eaeb63b7d2997fa518698563"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\seohub\\Navbar.tsx": {
+    "mtime": 1777108740.10965,
+    "hash": "5bfea6aa6ccad769a83695eedb4a43a8"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\seohub\\Pricing.tsx": {
+    "mtime": 1777008494.2880378,
+    "hash": "c23a1dfcef06380e8e3008a8645d8757"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\seohub\\Reveal.tsx": {
+    "mtime": 1777008436.693343,
+    "hash": "445f0f597d558b3e5bcfb7545bb3e08f"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\seohub\\UrlAnalyzer.tsx": {
+    "mtime": 1777008146.6122806,
+    "hash": "ed2f187baf2975ecfc18e1703357a7e4"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\seohub\\VisualPreview.tsx": {
+    "mtime": 1777008478.4609032,
+    "hash": "b7afb659d276edffd6d564ccdadf7480"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\accordion.tsx": {
+    "mtime": 1776920679.568863,
+    "hash": "f9ebb6ee913b44e5f3e06fe1d9679784"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\alert-dialog.tsx": {
+    "mtime": 1776920679.5748684,
+    "hash": "2ee6c5e5e070315114319bc060d17a52"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\alert.tsx": {
+    "mtime": 1776920679.5803776,
+    "hash": "354d0206f924d48bcebbb023c3940a6b"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\aspect-ratio.tsx": {
+    "mtime": 1776920679.586382,
+    "hash": "c5c364545e1b25a94e9e752cd67ad048"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\avatar.tsx": {
+    "mtime": 1776920679.5929813,
+    "hash": "53921dca0903c74cd72fada89388d9f8"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\badge.tsx": {
+    "mtime": 1776920679.5986435,
+    "hash": "8db4e6d330f88f4041f81e7cde43782b"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\breadcrumb.tsx": {
+    "mtime": 1776920679.6036553,
+    "hash": "c200fc41e9b214ebb6ccd19a300c42c5"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\button.tsx": {
+    "mtime": 1776920679.6103115,
+    "hash": "b59f5a3c54b63cf3ea4eb2523151f617"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\calendar.tsx": {
+    "mtime": 1776920679.616311,
+    "hash": "1da7a387f28cdb11722da319c0295a6c"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\card.tsx": {
+    "mtime": 1776920679.6218438,
+    "hash": "202402023747c80d975f48b906e6eb1b"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\carousel.tsx": {
+    "mtime": 1776920679.6268435,
+    "hash": "63a7442a3088b58113c8a8cfc1defe26"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\chart.tsx": {
+    "mtime": 1776920679.6333585,
+    "hash": "29cfd7470f3197deccd58b2b4f00fbae"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\checkbox.tsx": {
+    "mtime": 1776920679.6388695,
+    "hash": "cb12d2f3410761f7a678add95c90ac5d"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\collapsible.tsx": {
+    "mtime": 1776920679.6448753,
+    "hash": "934b00582dae08af749fb55469081de6"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\command.tsx": {
+    "mtime": 1776920679.649884,
+    "hash": "e911f182b4136a63c601c3fc48b2e9c7"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\context-menu.tsx": {
+    "mtime": 1776920679.6558895,
+    "hash": "9b8e8efdf0456cd542e32d341b071cac"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\dialog.tsx": {
+    "mtime": 1776920679.6614041,
+    "hash": "fc3a9626ba52435552c93ac3a74374ec"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\drawer.tsx": {
+    "mtime": 1776920679.6674044,
+    "hash": "05e2b536fe11649e9b4c6e73678e32a6"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\dropdown-menu.tsx": {
+    "mtime": 1776920679.6729221,
+    "hash": "f308eb98a2e21bf8bd1e30dbcb741dc0"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\form.tsx": {
+    "mtime": 1776920679.6794257,
+    "hash": "4bb820d59aad3ee5bc78097596298ace"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\hover-card.tsx": {
+    "mtime": 1776920679.6854315,
+    "hash": "f77f80ed64ff8f3549e5d7e9d837e08e"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\input-otp.tsx": {
+    "mtime": 1776920679.6909578,
+    "hash": "3fb5994635434d5168bee869689fc2aa"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\input.tsx": {
+    "mtime": 1776920679.696967,
+    "hash": "b8279d768c2a1ce78a05a369a0502877"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\label.tsx": {
+    "mtime": 1776920679.7024653,
+    "hash": "cd2b2255bbe519cb0865dfeaa6615797"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\menubar.tsx": {
+    "mtime": 1776920679.707473,
+    "hash": "163c3fa58a2b4ea2caa00166f4d862c7"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\navigation-menu.tsx": {
+    "mtime": 1776920679.713987,
+    "hash": "77e94b0c299d10c3763d2755bf556916"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\pagination.tsx": {
+    "mtime": 1776920679.7204924,
+    "hash": "a3ced9f9b19826b467d788b1bf01746f"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\popover.tsx": {
+    "mtime": 1776920679.7265003,
+    "hash": "c056d22288a642b756b77c7691ad4532"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\progress.tsx": {
+    "mtime": 1776920679.7330143,
+    "hash": "9a8b05beca19e008a562a10e489f5968"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\radio-group.tsx": {
+    "mtime": 1776920679.7385192,
+    "hash": "3773798b5b2f334a5db0dc9c8d06f1b8"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\resizable.tsx": {
+    "mtime": 1776920679.7445247,
+    "hash": "ec681e92cbe705b5571ded11b5227a2a"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\scroll-area.tsx": {
+    "mtime": 1776920679.7500362,
+    "hash": "cfbc224001af0e6daba676de225a2a47"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\select.tsx": {
+    "mtime": 1776920679.756051,
+    "hash": "25de64d0126624cbd8efa50cfb64bd21"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\separator.tsx": {
+    "mtime": 1776920679.7615738,
+    "hash": "ed1101f185e9dc801712593e3330a75d"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\sheet.tsx": {
+    "mtime": 1776920679.769075,
+    "hash": "3660be09e2e40467a22fd46b354c1b50"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\sidebar.tsx": {
+    "mtime": 1776920679.774084,
+    "hash": "9eab1256b1ffe3f1336eebfd07b319c9"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\skeleton.tsx": {
+    "mtime": 1776920679.7815983,
+    "hash": "c55f76f4faa1d6e888dbc51d41eaa586"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\slider.tsx": {
+    "mtime": 1776920679.7875996,
+    "hash": "e3bf7b6116ddbdbe8c7b3597d07daee0"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\sonner.tsx": {
+    "mtime": 1776920679.7957046,
+    "hash": "88644703cc00886c56e0e3b7df0e21d8"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\switch.tsx": {
+    "mtime": 1776920679.8012128,
+    "hash": "eccd8c41c46e782eaaa1f8be0111e089"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\table.tsx": {
+    "mtime": 1776920679.8072236,
+    "hash": "d0ff87c4734c23839337811378ad07df"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\tabs.tsx": {
+    "mtime": 1776920679.8137462,
+    "hash": "26b15e1ffce0f831be4da95b8f8a43df"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\textarea.tsx": {
+    "mtime": 1776920679.8192577,
+    "hash": "29ab470ee59e9da5070d4fba251bce81"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\toast.tsx": {
+    "mtime": 1776920679.826264,
+    "hash": "7c08b5cb6026058514672a4ebc53847e"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\toaster.tsx": {
+    "mtime": 1776920679.8317704,
+    "hash": "1903846ab268620de6356ef667e3fa21"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\toggle-group.tsx": {
+    "mtime": 1776920679.837778,
+    "hash": "e82bf234e3877ad708ea3d1dba614def"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\toggle.tsx": {
+    "mtime": 1776920679.8432837,
+    "hash": "ff7a7deebff23c3488e79ad72ee47e4b"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\tooltip.tsx": {
+    "mtime": 1776920679.850346,
+    "hash": "d7e923341b9e91d77db45ba5f2fa0cf9"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\components\\ui\\use-toast.ts": {
+    "mtime": 1776920679.8573544,
+    "hash": "4f094014a1315ca1081cbdc7f78d55cc"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\hooks\\use-mobile.tsx": {
+    "mtime": 1776920679.8669052,
+    "hash": "c0a0bdd4638c391a1dd06ac82074e60b"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\hooks\\use-toast.ts": {
+    "mtime": 1776920679.8741322,
+    "hash": "e706bc004c87e17db559a113637eddea"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\lib\\utils.ts": {
+    "mtime": 1776920679.8836486,
+    "hash": "d9837f38cc05303254571985e3164050"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\pages\\Index.tsx": {
+    "mtime": 1777007973.893221,
+    "hash": "a99d13d6ed570303da73be4757d5e335"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\pages\\NotFound.tsx": {
+    "mtime": 1776920679.8971658,
+    "hash": "233617e24ded7876ea905f003f0f2889"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\seo\\MetaTags.tsx": {
+    "mtime": 1777108711.5713627,
+    "hash": "29df1ec9b33b336f1ab0d054a3b208d5"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\seo\\pageMeta.ts": {
+    "mtime": 1777108723.8101516,
+    "hash": "cc449c121ea3d1904f5145fd94e5416a"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\seo\\schemas.ts": {
+    "mtime": 1777108719.2704105,
+    "hash": "616e32f1737536380342ec2a22c4ce29"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\test\\example.test.ts": {
+    "mtime": 1776920679.908692,
+    "hash": "f7aec10728902324d57cf05ee8a8e57e"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\src\\test\\setup.ts": {
+    "mtime": 1776920679.9142003,
+    "hash": "3ed816a7adf0e76610ce76bd32744ea0"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\index.html": {
+    "mtime": 1777108958.8822618,
+    "hash": "3137170415e6bfb6988393a4f331836c"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\README.md": {
+    "mtime": 1776920679.2950306,
+    "hash": "940c6b18d1cc8378daa51131ea5d4916"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\public\\robots.txt": {
+    "mtime": 1777107721.7124844,
+    "hash": "0b622a4508734e88d5bbcb6a8b0e2550"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\public\\favicon.svg": {
+    "mtime": 1777108942.2135224,
+    "hash": "fa72f432f29bff50eeab6b2671f94ec3"
+  },
+  "C:\\Users\\JAIMIN\\Desktop\\seo-hub-analyzer-main\\seo-hub-analyzer-main\\public\\placeholder.svg": {
+    "mtime": 1776920679.434765,
+    "hash": "b501d7dff3280ac829c321fe854d99d0"
+  }
+}

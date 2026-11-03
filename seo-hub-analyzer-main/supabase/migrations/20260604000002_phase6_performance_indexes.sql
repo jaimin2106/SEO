@@ -1,0 +1,1 @@
+-- ================================================================\n-- PHASE 6 PERFORMANCE INDEXES\n-- Applied via MCP apply_migration\n-- ================================================================\n\n-- See applied migration: phase6_performance_indexes_corrected\n-- See applied migration: phase6_cache_cleanup_and_pg_stats

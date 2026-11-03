@@ -1,0 +1,63 @@
+# =========================================================
+# robots.txt — SEO Hub Analyzer
+# =========================================================
+
+# ---- Public crawlers (global) ----------------------------
+User-agent: *
+Allow: /
+
+# Private / authenticated paths — must not be indexed
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /admin
+Disallow: /admin/
+Disallow: /auth
+Disallow: /auth/
+Disallow: /reset-password
+Disallow: /settings
+Disallow: /settings/
+Disallow: /report
+Disallow: /report/
+
+# ---- Google ----------------------------------------------
+User-agent: Googlebot
+Allow: /
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /admin
+Disallow: /admin/
+Disallow: /auth
+Disallow: /auth/
+Disallow: /reset-password
+Disallow: /settings
+Disallow: /settings/
+Disallow: /report
+Disallow: /report/
+
+# ---- Bing ------------------------------------------------
+User-agent: Bingbot
+Allow: /
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /admin
+Disallow: /admin/
+Disallow: /auth
+Disallow: /auth/
+Disallow: /reset-password
+Disallow: /settings
+Disallow: /settings/
+Disallow: /report
+Disallow: /report/
+
+# ---- Social crawlers (allow everything public) -----------
+User-agent: Twitterbot
+Allow: /
+
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: LinkedInBot
+Allow: /
+
+# ---- Sitemap (dynamic — auto-updates with new blog posts) ----
+Sitemap: https://seo-hub-jaimin.netlify.app/sitemap.xml

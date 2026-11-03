@@ -1,0 +1,709 @@
+@import url('https://rsms.me/inter/inter.css');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* SeoHub Design System - editorial warm minimal style. All colors HSL. */
+
+@layer base {
+  :root {
+    /* Surfaces */
+    --background: 52 26% 94%;             /* #f5f4ed */
+    --foreground: 60 2% 8%;               /* #141413 */
+
+    --card: 50 38% 97%;                   /* #faf9f5 */
+    --card-foreground: 60 2% 8%;
+
+    --popover: 50 38% 97%;
+    --popover-foreground: 60 2% 8%;
+
+    /* Brand */
+    --primary: 16 54% 52%;                /* #c96442 */
+    --primary-foreground: 50 38% 97%;
+    --primary-hover: 16 61% 59%;          /* #d97757 */
+
+    --secondary: 45 20% 90%;              /* #e8e6dc */
+    --secondary-foreground: 40 4% 29%;    /* #4d4c48 */
+
+    --muted: 52 20% 92%;
+    --muted-foreground: 50 3% 37%;        /* #5e5d59 */
+
+    --accent: 45 20% 90%;
+    --accent-foreground: 40 4% 29%;
+
+    --label: 48 2% 26%;                   /* #3d3d3a */
+
+    --destructive: 0 56% 46%;             /* #b53333 */
+    --destructive-foreground: 50 38% 97%;
+
+    --success: 142 55% 38%;
+    --success-foreground: 142 40% 30%;
+
+    --border: 46 23% 91%;                 /* #f0eee6 */
+    --input: 46 23% 91%;
+    --ring: 204 83% 58%;                  /* #3898ec */
+
+    --radius: 0.5rem;
+
+    --shadow-card: 0 0 0 1px hsl(45 8% 82%), 0 4px 24px hsl(0 0% 0% / 0.05);
+    --shadow-soft: 0 0 0 1px hsl(45 13% 78%);
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    font-feature-settings: 'cv11', 'ss01', 'ss03';
+    scroll-behavior: smooth;
+  }
+
+  @supports (font-variation-settings: normal) {
+    body {
+      font-family: 'Inter var', 'Inter', ui-sans-serif, system-ui, sans-serif;
+    }
+  }
+
+  h1, h2, h3, h4 {
+    color: hsl(var(--foreground));
+    font-family: Georgia, 'Times New Roman', serif;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+}
+
+@layer components {
+  .container-page {
+    @apply mx-auto w-full max-w-[1200px] px-5 sm:px-8;
+  }
+
+  .float-soft {
+    animation: float-soft 5s ease-in-out infinite;
+  }
+
+  .hero-card-float {
+    animation: hero-card-float 6s ease-in-out infinite;
+  }
+
+  .hero-card-float-delayed {
+    animation: hero-card-float 7.5s ease-in-out infinite;
+    animation-delay: 900ms;
+  }
+
+  .hero-panel-rise {
+    animation: hero-panel-rise 6.5s ease-in-out infinite;
+  }
+
+  .hero-panel-shine {
+    background: linear-gradient(120deg, transparent 0%, transparent 38%, rgba(255, 255, 255, 0.09) 49%, transparent 60%, transparent 100%);
+    background-size: 220% 100%;
+    animation: hero-panel-shine 5.5s linear infinite;
+  }
+
+  .hero-orbit {
+    animation: hero-orbit 10s linear infinite;
+  }
+
+  .hero-wave-line {
+    transform-origin: center;
+    animation: hero-wave-line 7s ease-in-out infinite;
+  }
+
+  .hero-node-float {
+    animation: hero-node-float 6.5s ease-in-out infinite;
+  }
+
+  .hero-browser-float {
+    animation: hero-browser-float 7.5s ease-in-out infinite;
+  }
+
+  .loader-skeleton {
+    position: relative;
+    overflow: hidden;
+    background: #f0eee6;
+  }
+
+  .loader-skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.62) 50%, transparent 100%);
+    animation: loader-skeleton-shimmer 1.8s ease-in-out infinite;
+  }
+
+  .loader-progress-sheen {
+    transform: translateX(-140%);
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.52) 50%, transparent 100%);
+    animation: loader-progress-sheen 2.2s linear infinite;
+  }
+
+  .loader-active-dot {
+    animation: loader-active-dot 1.7s ease-in-out infinite;
+  }
+
+  .reveal-hidden {
+    opacity: 0;
+    transform: translateY(18px);
+    transition: transform 700ms cubic-bezier(0.22, 1, 0.36, 1), opacity 700ms cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform, opacity;
+  }
+
+  .reveal-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* ── Report page utilities ─────────────────────────────── */
+
+  /* Sticky header glass effect */
+  .report-sticky-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    background-color: rgba(253, 251, 247, 0.88);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  }
+
+  /* Pill-tab nav: hide scrollbar on all browsers */
+  .report-tabs-scroll {
+    overflow-x: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    scroll-snap-type: x mandatory;
+  }
+  .report-tabs-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Micro-interaction: scale on active */
+  .btn-interactive {
+    transition: transform 150ms ease-out, background-color 150ms ease-out, box-shadow 150ms ease-out;
+  }
+  .btn-interactive:active {
+    transform: scale(0.97);
+  }
+
+  /* Score summary expand/collapse on mobile */
+  .summary-collapsed {
+    max-height: 4.5rem;
+    overflow: hidden;
+  }
+  .summary-expanded {
+    max-height: 60rem;
+    overflow: hidden;
+  }
+  .summary-fade-transition {
+    transition: max-height 350ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+
+@keyframes float-soft {
+  0%, 100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes hero-card-float {
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  50% {
+    transform: translate3d(0, -10px, 0);
+  }
+}
+
+@keyframes hero-panel-rise {
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
+    box-shadow: 0 30px 80px rgba(20, 20, 19, 0.34);
+  }
+
+  50% {
+    transform: translate3d(0, -8px, 0);
+    box-shadow: 0 36px 95px rgba(20, 20, 19, 0.42);
+  }
+}
+
+@keyframes hero-panel-shine {
+  0% {
+    background-position: 180% 0;
+  }
+
+  100% {
+    background-position: -40% 0;
+  }
+}
+
+@keyframes hero-orbit {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes hero-wave-line {
+  0%, 100% {
+    transform: translateX(0) scaleX(1);
+    opacity: 0.55;
+  }
+
+  50% {
+    transform: translateX(6px) scaleX(1.02);
+    opacity: 0.9;
+  }
+}
+
+@keyframes hero-node-float {
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  50% {
+    transform: translate3d(0, -8px, 0);
+  }
+}
+
+@keyframes hero-browser-float {
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  50% {
+    transform: translate3d(0, -10px, 0);
+  }
+}
+
+@keyframes loader-skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes loader-progress-sheen {
+  100% {
+    transform: translateX(360%);
+  }
+}
+
+@keyframes loader-active-dot {
+  0%, 100% {
+    opacity: 0.45;
+    transform: scale(0.92);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-hidden,
+  .reveal-visible,
+  .float-soft,
+  .hero-card-float,
+  .hero-card-float-delayed,
+  .hero-panel-rise,
+  .hero-panel-shine,
+  .hero-orbit,
+  .hero-wave-line,
+  .hero-node-float,
+  .hero-browser-float,
+  .loader-progress-sheen,
+  .loader-active-dot {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+
+  .loader-skeleton::after {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   ADMIN PANEL — Application Shell CSS
+   Sidebar-wrapper pattern: sidebar is IN-FLOW, not position:fixed.
+   Body/shell never scroll. Sidebar-nav and admin-content scroll only.
+═══════════════════════════════════════════════════════════════════ */
+
+/* Shell: full viewport, clips all overflow */
+.admin-shell {
+  display: flex;
+  height: 100dvh;      /* dvh = device viewport height — no mobile bar shift */
+  width: 100%;
+  overflow: hidden;
+  background-color: #f5f4ed;
+  position: relative;
+  font-family: 'Inter', ui-sans-serif, sans-serif;
+}
+
+/* Sidebar wrapper — flex child that transitions its width.
+   overflow:hidden clips the sidebar panel during collapse animation.
+   The sidebar INSIDE keeps width:256px; the wrapper shrinks around it. */
+.admin-sidebar-wrap {
+  flex-shrink: 0;
+  height: 100%;
+  overflow: hidden;
+  /* width & transition are set via React inline style for JS control */
+}
+
+/* Mobile overlay backdrop */
+.admin-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+/* ── Sidebar panel ─────────────────────────────────────────────── */
+/* Desktop: in-flow (no position:fixed). Height fills wrapper.
+   The browser routes wheel events here naturally when cursor is inside.
+   No JS needed for desktop scroll — CSS overflow-y:auto does it all. */
+.admin-sidebar {
+  width: 256px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: #141413;
+  border-right: 1px solid #2a2926;
+  overflow: hidden;    /* sidebar panel clips; .sidebar-nav scrolls internally */
+  flex-shrink: 0;
+}
+
+/* Mobile: overlay (position:fixed, slides in from left) */
+.admin-sidebar--mobile {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 30;
+  transform: translateX(-100%);
+  transition: transform 260ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.admin-sidebar--mobile-open {
+  transform: translateX(0);
+}
+
+/* Logo strip */
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #2a2926;
+  flex-shrink: 0;
+}
+.sidebar-logo-icon {
+  height: 2rem;
+  width: 2rem;
+  border-radius: 0.5rem;
+  background-color: #c96442;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.sidebar-logo-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #faf9f5;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+.sidebar-logo-sub {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #87867f;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+/* ── Nav scroll zone ────────────────────────────────────────────── */
+/* KEY: overflow-y:auto here is what captures mouse wheel.
+   overscroll-behavior:contain prevents the scroll from reaching body. */
+.sidebar-nav {
+  flex: 1;
+  min-height: 0;         /* flex child must have min-height:0 to scroll! */
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 1rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  overscroll-behavior: contain;
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: #3d3d3a transparent;
+}
+.sidebar-nav::-webkit-scrollbar        { width: 4px; }
+.sidebar-nav::-webkit-scrollbar-track  { background: transparent; }
+.sidebar-nav::-webkit-scrollbar-thumb  { background: #3d3d3a; border-radius: 4px; }
+.sidebar-nav::-webkit-scrollbar-thumb:hover { background: #5e5d59; }
+
+.sidebar-section-label {
+  padding: 0 0.75rem;
+  margin-bottom: 0.375rem;
+  font-size: 10px;
+  font-weight: 700;
+  color: #87867f;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.sidebar-nav-group { display: flex; flex-direction: column; gap: 2px; }
+
+.sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 120ms, color 120ms;
+  outline: none;
+}
+.sidebar-nav-item:focus-visible  { outline: 2px solid #c96442; outline-offset: 1px; }
+.sidebar-nav-item--active        { background-color: #c96442; color: #fff; }
+.sidebar-nav-item--idle          { color: #87867f; }
+.sidebar-nav-item--idle:hover    { background-color: #1f1e1a; color: #faf9f5; }
+
+/* Footer */
+.sidebar-footer {
+  flex-shrink: 0;
+  border-top: 1px solid #2a2926;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.sidebar-user { display: flex; align-items: center; gap: 0.75rem; padding: 0 0.25rem; }
+.sidebar-user-avatar {
+  height: 2rem;
+  width: 2rem;
+  border-radius: 9999px;
+  background-color: rgba(201, 100, 66, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: #c96442;
+}
+.sidebar-user-info  { min-width: 0; flex: 1; }
+.sidebar-user-email {
+  font-size: 12px;
+  font-weight: 600;
+  color: #faf9f5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar-user-role {
+  font-size: 10px;
+  font-weight: 500;
+  color: #c96442;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-top: 2px;
+}
+.sidebar-signout {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 13px;
+  font-weight: 500;
+  color: #87867f;
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  transition: background-color 120ms, color 120ms;
+  text-align: left;
+}
+.sidebar-signout:hover         { background-color: #1f1e1a; color: #faf9f5; }
+.sidebar-signout:focus-visible { outline: 2px solid #c96442; outline-offset: 1px; }
+
+/* ── Main area ─────────────────────────────────────────────────── */
+.admin-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Header */
+.admin-header-bar {
+  display: flex;
+  align-items: center;
+  height: 3.5rem;
+  flex-shrink: 0;
+  background-color: #faf9f5;
+  border-bottom: 1px solid #e8e6dc;
+  z-index: 10;
+}
+.admin-menu-btn {
+  height: 3.5rem;
+  padding: 0 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #87867f;
+  background: none;
+  border: none;
+  border-right: 1px solid #e8e6dc;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 120ms, color 120ms;
+}
+.admin-menu-btn:hover         { background-color: #f0eee6; color: #141413; }
+.admin-menu-btn:focus-visible { outline: 2px solid #c96442; outline-offset: -2px; }
+
+/* ── Content scroll zone ────────────────────────────────────────── */
+/* This is the ONLY element that scrolls on desktop pages. */
+.admin-content {
+  flex: 1;
+  min-height: 0;        /* flex child must have min-height:0 to scroll! */
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #d1cfc5 transparent;
+}
+.admin-content::-webkit-scrollbar        { width: 6px; }
+.admin-content::-webkit-scrollbar-track  { background: transparent; }
+.admin-content::-webkit-scrollbar-thumb  { background: #d1cfc5; border-radius: 6px; }
+.admin-content::-webkit-scrollbar-thumb:hover { background: #b0aea5; }
+
+.admin-content-inner { padding: 1.25rem; min-height: 100%; }
+@media (min-width: 768px)  { .admin-content-inner { padding: 1.5rem; } }
+@media (min-width: 1024px) { .admin-content-inner { padding: 2rem;   } }
+@media (min-width: 1280px) { .admin-content-inner { padding: 2.5rem; } }
+
+/* Table horizontal scroll */
+.admin-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  overscroll-behavior-x: contain;
+  border-radius: 0.75rem;
+  scrollbar-width: thin;
+  scrollbar-color: #d1cfc5 transparent;
+}
+.admin-table-wrap::-webkit-scrollbar        { height: 5px; }
+.admin-table-wrap::-webkit-scrollbar-track  { background: transparent; }
+.admin-table-wrap::-webkit-scrollbar-thumb  { background: #d1cfc5; border-radius: 5px; }
+.admin-table-wrap::-webkit-scrollbar-thumb:hover { background: #b0aea5; }
+
+/* Stat grid */
+.admin-stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+@media (min-width: 1024px) { .admin-stat-grid { grid-template-columns: repeat(4, 1fr); } }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .admin-sidebar-wrap, .admin-sidebar--mobile { transition: none !important; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   REPORT PAGE — Scrollbar & Layout Consistency
+═══════════════════════════════════════════════════════════════════ */
+
+/* Report main scrolling container */
+#main-scroll-area {
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #d1cfc5 transparent;
+}
+#main-scroll-area::-webkit-scrollbar        { width: 6px; }
+#main-scroll-area::-webkit-scrollbar-track  { background: transparent; }
+#main-scroll-area::-webkit-scrollbar-thumb  { background: #d1cfc5; border-radius: 6px; }
+#main-scroll-area::-webkit-scrollbar-thumb:hover { background: #b0aea5; }
+
+/* Report sidebar */
+.report-sidebar-nav {
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #e8e6dc transparent;
+}
+.report-sidebar-nav::-webkit-scrollbar        { width: 4px; }
+.report-sidebar-nav::-webkit-scrollbar-track  { background: transparent; }
+.report-sidebar-nav::-webkit-scrollbar-thumb  { background: #e8e6dc; border-radius: 4px; }
+.report-sidebar-nav::-webkit-scrollbar-thumb:hover { background: #d1cfc5; }
+

@@ -1,0 +1,70 @@
+# netlify.toml
+# ─────────────────────────────────────────────────────────────
+# Netlify build + routing config for SEO Hub Analyzer
+# ─────────────────────────────────────────────────────────────
+
+[build]
+  command   = "npm run build"   # generates sitemap.xml then runs vite build
+  publish   = "dist"
+  functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# ── Redirects ─────────────────────────────────────────────────
+
+# Route /sitemap.xml to the dynamic serverless function
+# This MUST be before the SPA catch-all rule
+[[redirects]]
+  from   = "/sitemap.xml"
+  to     = "/.netlify/functions/sitemap"
+  status = 200
+  force  = true                 # overrides any static file with the same name
+
+# Route /robots.txt directly from the static public/ file (no function needed)
+[[redirects]]
+  from   = "/robots.txt"
+  to     = "/robots.txt"
+  status = 200
+
+# SPA catch-all — all other routes go to index.html
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200
+
+# ── Headers ───────────────────────────────────────────────────
+
+# Prevent indexing of admin/dashboard/report pages
+[[headers]]
+  for = "/admin/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+
+[[headers]]
+  for = "/dashboard"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+
+[[headers]]
+  for = "/dashboard/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+
+[[headers]]
+  for = "/report"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+
+[[headers]]
+  for = "/report/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+
+# Security headers for all public pages
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options        = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy        = "strict-origin-when-cross-origin"

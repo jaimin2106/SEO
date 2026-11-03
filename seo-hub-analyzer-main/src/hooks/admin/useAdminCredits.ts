@@ -19,7 +19,7 @@ export function useAdminCreditHistory(userId: string | undefined) {
   return useQuery({
     queryKey: ['admin', 'user', userId, 'credits'],
     queryFn: async () => {
-      if (!userId) return [];
+      if (!userId) return { transactions: [], adjustments: [] };
       // Fetch from credit_transactions + admin_credit_adjustments
       const [{ data: txns }, { data: adjs }] = await Promise.all([
         supabase

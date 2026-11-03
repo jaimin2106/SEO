@@ -1,13 +1,7 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import Lenis from 'lenis';
-
-// Augment the global window type to hold our Lenis instance
-declare global {
-  interface Window {
-    lenis?: Lenis;
-  }
-}
+import { setLenisInstance } from '@/lib/lenisInstance';
 
 const SmoothScroll = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
@@ -18,7 +12,7 @@ const SmoothScroll = ({ children }: { children: React.ReactNode }) => {
     // In an app-shell layout where body overflow is hidden and child 
     // containers scroll independently, Lenis breaks all scrolling.
     if (location.pathname.startsWith('/admin') || location.pathname.startsWith('/report')) {
-      window.lenis = undefined;
+      setLenisInstance(undefined);
       return;
     }
 
@@ -30,7 +24,7 @@ const SmoothScroll = ({ children }: { children: React.ReactNode }) => {
     });
 
     // Expose globally so ScrollToTop can trigger hash-based smooth scrolls
-    window.lenis = lenis;
+    setLenisInstance(lenis);
 
     function raf(time: number) {
       lenis.raf(time);
@@ -41,7 +35,7 @@ const SmoothScroll = ({ children }: { children: React.ReactNode }) => {
 
     return () => {
       lenis.destroy();
-      window.lenis = undefined;
+      setLenisInstance(undefined);
     };
   }, [location.pathname]);
 

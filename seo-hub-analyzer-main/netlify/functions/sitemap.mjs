@@ -46,11 +46,15 @@ export const handler = async (event) => {
   // ── 1. Determine the base URL ────────────────────────────────
   // VITE_APP_URL can be set in Netlify → Site settings → Env vars
   // to move to a custom domain without code changes.
-  // We deliberately do NOT use Netlify's auto `URL` env var because
-  // it returns the deploy-preview URL on PR deploys — which would
-  // pollute the sitemap with non-canonical URLs.
-  const CANONICAL = "https://seo-hub-jaimin.netlify.app";
-  const baseUrl = (process.env.VITE_APP_URL || CANONICAL).replace(/\/$/, "");
+  const isProductionContext = !process.env.CONTEXT || process.env.CONTEXT === "production";
+  const deployUrl = isProductionContext
+    ? process.env.VITE_APP_URL || process.env.URL
+    : process.env.DEPLOY_PRIME_URL || process.env.URL;
+  const baseUrl = (deployUrl || "").replace(/\/$/, "");
+
+  if (!baseUrl) {
+    return { statusCode: 500, body: "Site URL is not configured." };
+  }
 
   // ── 2. Fetch dynamic blog routes from Supabase ──────────────
   let blogRoutes = [];

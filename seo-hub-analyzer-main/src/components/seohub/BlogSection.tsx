@@ -1,10 +1,20 @@
 import { ArrowRight, Globe, Zap, FileText, Code, Link as LinkIcon, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ElementType } from "react";
 import { supabase } from "@/lib/supabase";
 
+type BlogCard = {
+  id: string;
+  title: string;
+  published_at: string;
+  color: string;
+  Icon: ElementType;
+  slug: string;
+  cover_image?: string | null;
+};
+
 // Fallback mocks — used while loading or if DB has fewer than 3 posts
-const MOCK_BLOGS = [
+const MOCK_BLOGS: BlogCard[] = [
   {
     id: "mock-1",
     title: "SEO Managed Agents: dreaming, outcomes, and multiagent orchestration",
@@ -49,7 +59,7 @@ const COLOR_MAP: Record<string, string> = {
   "Core Web Vitals": "bg-[#c8e6c9]",
 };
 
-function normalizeBlogs(data: any[]): typeof MOCK_BLOGS {
+function normalizeBlogs(data: any[]): BlogCard[] {
   return data.map((b) => {
     const catName = b.blog_categories?.name ?? "";
     return {
@@ -65,7 +75,7 @@ function normalizeBlogs(data: any[]): typeof MOCK_BLOGS {
 }
 
 const BlogSection = () => {
-  const [blogs, setBlogs] = useState<any[]>([]);
+  const [blogs, setBlogs] = useState<BlogCard[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

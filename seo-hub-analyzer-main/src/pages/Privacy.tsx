@@ -3,7 +3,7 @@ import Footer from "@/components/seohub/Footer";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] } }
+  visible: { opacity: 1, y: 0, transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } }
 };
 
 const sections = [
@@ -33,7 +33,7 @@ export default function Privacy() {
               <motion.div
                 key={s.title}
                 initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-                transition={{ delay: i * 0.04, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                transition={{ delay: i * 0.04, duration: 0.5, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] }}
               >
                 <h2 className="font-serif font-medium text-[22px] text-[#141413] mb-3">{s.title}</h2>
                 <p className="text-[15px] leading-[1.8] text-[#5e5d59]">{s.body}</p>

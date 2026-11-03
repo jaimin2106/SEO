@@ -14,34 +14,25 @@
  * ─────────────────────────────────────────────────────────────
  */
 
-import { writeFileSync, readFileSync } from "fs";
+import { mkdirSync, readFileSync, writeFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 import { createClient } from "@supabase/supabase-js";
+import { loadEnv } from "vite";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const OUTPUT_PATH = resolve(__dirname, "../public/sitemap.xml");
+const PROJECT_ROOT = resolve(__dirname, "..");
+const OUTPUT_PATH = resolve(PROJECT_ROOT, "dist/sitemap.xml");
+const ROBOTS_SOURCE_PATH = resolve(PROJECT_ROOT, "public/robots.txt");
+const ROBOTS_OUTPUT_PATH = resolve(PROJECT_ROOT, "dist/robots.txt");
 const TODAY = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
 
-// ─── Read env variables without dotenv ────────────────────────
-function loadEnv() {
-  try {
-    const envPath = resolve(__dirname, "../.env");
-    const content = readFileSync(envPath, "utf8");
-    const result = {};
-    for (const line of content.split("\n")) {
-      const match = line.match(/^\s*([\w.]+)\s*=\s*(.*)?\s*$/);
-      if (match) result[match[1]] = match[2]?.trim().replace(/^["']|["']$/g, "") ?? "";
-    }
-    return result;
-  } catch {
-    return {};
-  }
-}
-
-const env = { ...loadEnv(), ...process.env };
-// Priority: explicit VITE_APP_URL env var → Netlify auto URL → fallback
-const BASE_URL = (env.VITE_APP_URL || env.URL || "https://seo-hub-jaimin.netlify.app").replace(/\/$/, "");
+const env = { ...loadEnv("production", PROJECT_ROOT, ""), ...process.env };
+const isProductionContext = !env.CONTEXT || env.CONTEXT === "production";
+const deployUrl = isProductionContext
+  ? env.VITE_APP_URL || env.URL
+  : env.DEPLOY_PRIME_URL || env.URL;
+const BASE_URL = (deployUrl || "http://localhost:8080").replace(/\/$/, "");
 const SUPABASE_URL = env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = env.VITE_SUPABASE_ANON_KEY;
 
@@ -129,7 +120,12 @@ ${entries}
 const blogRoutes = await fetchBlogRoutes();
 const allRoutes = [...staticRoutes, ...blogRoutes];
 const xml = buildSitemap(allRoutes);
+mkdirSync(resolve(PROJECT_ROOT, "dist"), { recursive: true });
 writeFileSync(OUTPUT_PATH, xml, "utf8");
+const robots = readFileSync(ROBOTS_SOURCE_PATH, "utf8")
+  .replace(/^Sitemap:\s*.*\r?\n?/gim, "")
+  .trimEnd();
+writeFileSync(ROBOTS_OUTPUT_PATH, `${robots}\n\nSitemap: ${BASE_URL}/sitemap.xml\n`, "utf8");
 
 console.log(`✅ sitemap.xml generated → ${OUTPUT_PATH}`);
 console.log(`   ${staticRoutes.length} static URLs + ${blogRoutes.length} blog URLs = ${allRoutes.length} total | lastmod: ${TODAY}`);

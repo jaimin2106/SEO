@@ -1,9 +1,19 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://mock-supabase-url.supabase.co";
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "mock-anon-key";
+const configuredUrl = import.meta.env.VITE_SUPABASE_URL;
+const configuredAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const isMockMode = !configuredUrl && !configuredAnonKey;
 
-const isMockMode = !import.meta.env.VITE_SUPABASE_URL;
+if (Boolean(configuredUrl) !== Boolean(configuredAnonKey)) {
+  throw new Error("Set both VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.");
+}
+
+if (import.meta.env.PROD && isMockMode) {
+  throw new Error("Supabase environment variables are required in production.");
+}
+
+const supabaseUrl = configuredUrl || "https://mock-supabase-url.supabase.co";
+const supabaseAnonKey = configuredAnonKey || "mock-anon-key";
 
 if (isMockMode) {
   console.warn(

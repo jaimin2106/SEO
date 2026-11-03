@@ -10,12 +10,10 @@
  * ─────────────────────────────────────────────────────────────
  */
 
-/** Hardcoded canonical production URL — always correct for this Netlify site. */
-const CANONICAL_URL = "https://seo-hub-jaimin.netlify.app";
-
-/** The active site URL. Trailing slash stripped. */
+/** Use a production override when configured, otherwise respect the active origin. */
 export const SITE_URL: string = (
-  import.meta.env.VITE_APP_URL ?? CANONICAL_URL
+  import.meta.env.VITE_APP_URL ||
+  (typeof window === "undefined" ? "" : window.location.origin)
 ).replace(/\/$/, "");
 
 /** Helper: build an absolute URL from a path */

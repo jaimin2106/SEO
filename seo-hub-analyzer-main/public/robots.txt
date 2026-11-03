@@ -59,5 +59,3 @@ Allow: /
 User-agent: LinkedInBot
 Allow: /
 
-# ---- Sitemap (dynamic — auto-updates with new blog posts) ----
-Sitemap: https://seo-hub-jaimin.netlify.app/sitemap.xml

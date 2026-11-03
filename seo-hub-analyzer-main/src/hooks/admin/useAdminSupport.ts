@@ -38,6 +38,13 @@ export interface TicketMessage {
   users?: { email: string; full_name: string | null };
 }
 
+function normalizeTicket(row: any): SupportTicket {
+  return {
+    ...row,
+    users: Array.isArray(row.users) ? row.users[0] : row.users,
+  };
+}
+
 export function useTickets(filters?: { status?: TicketStatus; type?: TicketType }) {
   return useQuery({
     queryKey: ['admin', 'support', 'tickets', filters],
@@ -50,7 +57,7 @@ export function useTickets(filters?: { status?: TicketStatus; type?: TicketType 
       if (filters?.type)   q = q.eq('type',   filters.type);
       const { data, error } = await q;
       if (error) throw error;
-      return data as SupportTicket[];
+      return (data ?? []).map(normalizeTicket);
     },
   });
 }
@@ -66,7 +73,8 @@ export function useTicketDetail(ticketId: string | null) {
         .eq('id', ticketId!)
         .single();
       if (error) throw error;
-      return data as SupportTicket;
+      if (!data) throw new Error('Support ticket not found');
+      return normalizeTicket(data);
     },
   });
 }

@@ -176,7 +176,9 @@ export function useAdminBlogMutations() {
         }
         const { data, error } = await updateQuery.select('updated_at').maybeSingle();
         if (error) {
-          if (error.code === '23505') throw new Error('This slug is already in use. Choose a unique slug.');
+          if (error.code === '23505') {
+            throw new Error('This URL slug is already used by another article. Choose a unique slug or open that article to edit it.');
+          }
           throw new Error(error.message);
         }
         if (!data) {
@@ -186,7 +188,9 @@ export function useAdminBlogMutations() {
       } else {
         const { data, error } = await supabase.from('blogs').insert(payloadToSave).select('id, updated_at').single();
         if (error) {
-          if (error.code === '23505') throw new Error('This slug is already in use. Choose a unique slug.');
+          if (error.code === '23505') {
+            throw new Error('This URL slug is already used by another article. Choose a unique slug or open that article to edit it.');
+          }
           throw new Error(error.message);
         }
         result = { id: data.id, updated_at: data.updated_at };

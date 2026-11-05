@@ -73,6 +73,7 @@ const AdminBlogEditor: React.FC = () => {
   const persistedStatus = useRef<BlogStatus | null>(isNew ? 'draft' : null);
   const saveInProgress = useRef(false);
   const queuedAutoSave = useRef(false);
+  const failedSaveSnapshot = useRef<string | null>(null);
   const savedCloudSnapshot = useRef<string | null>(null);
   const hasLoadedInitialData = useRef(false);
   const pendingImageCleanupRef = useRef(new Set<string>());
@@ -198,6 +199,8 @@ const AdminBlogEditor: React.FC = () => {
   }, [initialData, isNew, currentSnapshot]);
 
   const handleSave = async (forceStatus?: BlogStatus, isAutoSave = false) => {
+    if (!isAutoSave) failedSaveSnapshot.current = null;
+    if (isAutoSave && failedSaveSnapshot.current === currentSnapshot) return;
     if (saveInProgress.current) {
       if (isAutoSave) queuedAutoSave.current = true;
       return;
@@ -243,6 +246,7 @@ const AdminBlogEditor: React.FC = () => {
     if (!isAutoSave) setStatus(targetStatus);
     setSaveStatus('saving');
     saveInProgress.current = true;
+    let attemptedSnapshot: string | null = null;
 
     const safeBlocks = blocks.map((block): BlogBlock => {
       if (block.type === 'rich_text') return { ...block, html: sanitizeBlogHtml(block.html) };
@@ -260,6 +264,7 @@ const AdminBlogEditor: React.FC = () => {
         title, slug: finalSlug, excerpt, coverImage, status: targetStatus, scheduledAt,
         categoryId, authorId, tagIds, blocks, seoMetadata,
       });
+      attemptedSnapshot = saveSnapshot;
       const saved = await saveBlog.mutateAsync({
         id: currentDocId.current,
         expected_updated_at: currentUpdatedAt.current,
@@ -288,7 +293,10 @@ const AdminBlogEditor: React.FC = () => {
       currentUpdatedAt.current = saved.updated_at;
       persistedStatus.current = targetStatus;
       if (saved.error) {
+        failedSaveSnapshot.current = saveSnapshot;
+        savedCloudSnapshot.current = saveSnapshot;
         setSaveStatus('error');
+        setLastSaved(new Date());
         if (isNew) {
           const newDraft = localStorage.getItem('seo_hub_draft_new');
           if (newDraft) localStorage.setItem(`seo_hub_draft_${saved.id}`, newDraft);
@@ -298,6 +306,7 @@ const AdminBlogEditor: React.FC = () => {
         return;
       }
 
+      failedSaveSnapshot.current = null;
       setSaveStatus('saved_cloud');
       setLastSaved(new Date());
       savedCloudSnapshot.current = saveSnapshot;
@@ -323,6 +332,7 @@ const AdminBlogEditor: React.FC = () => {
         navigate(`/admin/blogs/editor/${saved.id}`);
       }
     } catch (error: unknown) {
+      failedSaveSnapshot.current = attemptedSnapshot;
       setSaveStatus('error');
       console.error(error);
     } finally {
@@ -370,6 +380,7 @@ const AdminBlogEditor: React.FC = () => {
       || uploadingBlockIndex !== null
       || status !== persistedStatus.current
       || currentSnapshot === savedCloudSnapshot.current
+      || currentSnapshot === failedSaveSnapshot.current
     ) return;
 
     const timer = window.setTimeout(() => {

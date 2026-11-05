@@ -65,7 +65,8 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       .limit(1)
       .single();
 
-    if (error || !data) return null;
+    if (error?.code === 'PGRST116' || !data) return null;
+    if (error) throw new Error(`Unable to verify admin role: ${error.message}`);
 
     // data.admin_roles may be an array (join) or object depending on supabase-js version
     const roleRow = Array.isArray(data.admin_roles) ? data.admin_roles[0] : data.admin_roles;
@@ -81,6 +82,7 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   // On mount: check existing session
   useEffect(() => {
     let cancelled = false;
+    let roleLookupSequence = 0;
 
     const init = async () => {
       try {
@@ -107,7 +109,7 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     init();
 
     // Listen for auth changes (tab re-focus, etc.)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (cancelled) return;
       
       // Skip duplicate initial session fetch
@@ -115,11 +117,22 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       if (session?.user) {
         setHasSession(true);
-        // Silently update the role in the background. 
-        // Do NOT set isLoading to true, as it unmounts the active admin page on tab switches.
-        const admin = await fetchAdminRole(session.user.id, session.user.email ?? '');
-        if (!cancelled) setAdminUser(admin);
+        const requestSequence = ++roleLookupSequence;
+        const { id, email } = session.user;
+
+        // Supabase auth callbacks must return before making requests with the client.
+        window.setTimeout(() => {
+          void fetchAdminRole(id, email ?? '')
+            .then((admin) => {
+              if (!cancelled && requestSequence === roleLookupSequence) setAdminUser(admin);
+            })
+            .catch((error: unknown) => {
+              console.error('Admin role refresh failed:', error);
+              if (!cancelled && requestSequence === roleLookupSequence) setAdminUser(null);
+            });
+        }, 0);
       } else {
+        roleLookupSequence += 1;
         setHasSession(false);
         setAdminUser(null);
         setIsLoading(false);
@@ -140,7 +153,16 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (error) return { error: error.message };
     if (!data.user) return { error: 'Sign-in failed. Please try again.' };
 
-    const admin = await fetchAdminRole(data.user.id, data.user.email ?? '');
+    let admin: AdminUser | null;
+    try {
+      admin = await fetchAdminRole(data.user.id, data.user.email ?? '');
+    } catch (roleError) {
+      await supabase.auth.signOut();
+      return {
+        error: roleError instanceof Error ? roleError.message : 'Unable to verify admin access.',
+      };
+    }
+
     if (!admin) {
       await supabase.auth.signOut();
       return { error: 'Access denied. You do not have admin privileges.' };

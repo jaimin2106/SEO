@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { ArrowLeft, ArrowRight, Share2, Bookmark, Clock, Twitter, Linkedin, Facebook, Link as LinkIcon, Zap, CheckCircle2, ChevronRight, Code, Globe, FileText, Shield } from "lucide-react";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import Footer from "@/components/seohub/Footer";
 import { supabase } from "@/lib/supabase";
 import { BlogRenderer, BlogBlock } from "@/components/blog/BlogRenderer";
@@ -8,15 +8,80 @@ import MetaTags from "@/seo/MetaTags";
 import { buildArticleSchema } from "@/seo/schemas";
 import { siteUrl } from "@/lib/siteConfig";
 
+interface BlogSeoMetadata {
+  seo_title?: string;
+  meta_description?: string;
+  canonical_url?: string;
+  og_title?: string;
+  og_description?: string;
+  og_image?: string;
+  twitter_title?: string;
+  twitter_description?: string;
+  twitter_image?: string;
+  twitter_card?: string;
+  schema_type?: string;
+  robots_index?: boolean;
+  robots_follow?: boolean;
+  cover_image_alt?: string;
+}
+
+interface BlogCategorySummary {
+  name: string;
+  color?: string | null;
+}
+
+interface BlogAuthorSummary {
+  name: string;
+  avatar_url?: string | null;
+  bio?: string | null;
+}
+
+interface BlogTagSummary {
+  name: string;
+  slug: string;
+}
+
+interface BlogPostTagRow {
+  blog_tags: BlogTagSummary | BlogTagSummary[] | null;
+}
+
+interface RelatedBlog {
+  id: string;
+  title: string;
+  slug: string;
+  published_at: string | null;
+  blog_categories?: BlogCategorySummary | BlogCategorySummary[] | null;
+}
+
+interface PublishedBlog {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string | null;
+  content: BlogBlock[] | null;
+  cover_image: string | null;
+  published_at: string | null;
+  updated_at: string | null;
+  reading_time: number | null;
+  seo_metadata: BlogSeoMetadata | null;
+  category: BlogCategorySummary | null;
+  author: BlogAuthorSummary | null;
+  tags: BlogTagSummary[];
+}
+
+function firstRelation<T>(relation: T | T[] | null | undefined): T | null {
+  return Array.isArray(relation) ? relation[0] ?? null : relation ?? null;
+}
+
 const BlogPost = () => {
   const { slug } = useParams<{ slug: string }>();
-  const navigate = useNavigate();
   const [scrollProgress, setScrollProgress] = useState(0);
   
-  const [post, setPost] = useState<any>(null);
+  const [post, setPost] = useState<PublishedBlog | null>(null);
   const [loading, setLoading] = useState(true);
+  const [postError, setPostError] = useState<'not-found' | 'load-error' | null>(null);
 
-  const [recentBlogs, setRecentBlogs] = useState<any[]>([]);
+  const [recentBlogs, setRecentBlogs] = useState<RelatedBlog[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
@@ -47,49 +112,69 @@ const BlogPost = () => {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetchPost = async () => {
       setLoading(true);
-      
-      const { data, error } = await supabase
-        .from('blogs')
-        .select('*, blog_categories(name, color), blog_authors(name, avatar_url, bio)')
-        .eq('slug', slug)
-        .eq('status', 'published')
-        .single();
-        
-      if (error || !data) {
-        navigate('/blog');
-        return;
+      setPostError(null);
+
+      try {
+        const { data, error } = await supabase
+          .from('blogs')
+          .select('*, blog_categories(name, color), blog_authors(name, avatar_url, bio), blog_post_tags(blog_tags(name, slug))')
+          .eq('slug', slug)
+          .eq('status', 'published')
+          .lte('published_at', new Date().toISOString())
+          .single();
+
+        if (cancelled) return;
+        if (error || !data) {
+          console.error('Could not load published blog post:', error?.message);
+          setPostError(error?.code === 'PGRST116' || !data ? 'not-found' : 'load-error');
+          setLoading(false);
+          return;
+        }
+
+        setPost({
+          ...data,
+          category: firstRelation(data.blog_categories),
+          author: firstRelation(data.blog_authors),
+          tags: ((data.blog_post_tags ?? []) as BlogPostTagRow[])
+            .flatMap((row) => {
+              const relation = firstRelation(row.blog_tags);
+              return relation ? [relation] : [];
+            }),
+        });
+        void supabase.from('blog_views').insert({
+          blog_id: data.id,
+          user_agent: navigator.userAgent.slice(0, 200),
+          referer: document.referrer || null,
+        });
+
+        const { data: recent, error: recentError } = await supabase
+          .from('blogs')
+          .select('id, title, slug, published_at, blog_categories(name, color)')
+          .eq('status', 'published')
+          .lte('published_at', new Date().toISOString())
+          .neq('id', data.id)
+          .order('published_at', { ascending: false })
+          .limit(3);
+
+        if (cancelled) return;
+        if (recentError) console.error('Could not load related blog posts:', recentError.message);
+        if (recent) setRecentBlogs(recent);
+        setLoading(false);
+      } catch (error) {
+        if (cancelled) return;
+        console.error('Blog post request failed:', error);
+        setPostError('load-error');
+        setLoading(false);
       }
-      setPost({
-        ...data,
-        category: data.blog_categories,
-        author: data.blog_authors
-      });
-
-      // Track view (fire-and-forget — non-blocking)
-      supabase.from('blog_views').insert({
-        blog_id: data.id,
-        user_agent: navigator.userAgent.slice(0, 200),
-        referer: document.referrer || null,
-      }).then(() => {/* silent */});
-
-      // Fetch keep reading articles
-      const { data: recent } = await supabase
-        .from('blogs')
-        .select('id, title, slug, published_at, blog_categories(name, color)')
-        .eq('status', 'published')
-        .neq('id', data.id)
-        .order('published_at', { ascending: false })
-        .limit(3);
-        
-      if (recent) setRecentBlogs(recent);
-
-      setLoading(false);
     };
     
     if (slug) fetchPost();
-  }, [slug, navigate]);
+    return () => { cancelled = true; };
+  }, [slug]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -102,7 +187,7 @@ const BlogPost = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  if (loading || !post) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-[#faf9f5] pt-16 px-6 animate-pulse">
         <div className="max-w-[800px] mx-auto">
@@ -118,24 +203,67 @@ const BlogPost = () => {
     );
   }
 
+  if (postError || !post) {
+    const notFound = postError === 'not-found';
+    return (
+      <div className="flex min-h-screen flex-col bg-[#faf9f5] text-[#141413]">
+        <MetaTags title={notFound ? 'Article not found | SEO Hub Analyzer' : 'Article unavailable | SEO Hub Analyzer'} description="This blog article is not available." noIndex />
+        <main className="container-page flex flex-1 flex-col items-center justify-center py-24 text-center">
+          <h1 className="font-serif text-[36px]">{notFound ? 'Article not found' : 'Article unavailable'}</h1>
+          <p className="mt-3 max-w-md text-[15px] leading-relaxed text-[#5e5d59]">
+            {notFound ? 'This article may have been unpublished or moved.' : 'We could not load this article right now. Please try again later.'}
+          </p>
+          <Link to="/blog" className="mt-6 inline-flex items-center gap-2 text-[14px] font-medium text-[#c96442] hover:underline">
+            <ArrowLeft className="h-4 w-4" /> Back to Blog
+          </Link>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   const publishDate = post.published_at ? new Date(post.published_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Unknown Date';
+  const contentHeadings = (post.content ?? []).filter(
+    (block): block is Extract<BlogBlock, { type: 'heading' }> => block.type === 'heading'
+  );
 
   return (
     <div className="min-h-screen font-sans bg-[#faf9f5] text-[#141413]">
       <MetaTags
-        title={`${post.title} | SEO Hub Analyzer Blog`}
-        description={post.excerpt ?? "Read this article on SEO Hub Analyzer."}
-        canonical={siteUrl(`/blog/${post.slug ?? slug}`)}
-        ogImage={post.cover_image ?? undefined}
+        title={`${post.seo_metadata?.seo_title || post.title} | SEO Hub Analyzer Blog`}
+        description={post.seo_metadata?.meta_description || post.excerpt || "Read this article on SEO Hub Analyzer."}
+        canonical={post.seo_metadata?.canonical_url || siteUrl(`/blog/${post.slug ?? slug}`)}
+        ogImage={post.seo_metadata?.og_image || post.cover_image || undefined}
+        ogTitle={post.seo_metadata?.og_title || post.seo_metadata?.seo_title || post.title}
+        ogDescription={post.seo_metadata?.og_description || post.seo_metadata?.meta_description || post.excerpt || ""}
         ogType="article"
-        schema={buildArticleSchema({
-          title: post.title,
-          description: post.excerpt,
-          slug: post.slug ?? slug ?? "",
-          publishedAt: post.published_at,
-          authorName: post.author?.name ?? "SEO Hub Analyzer Team",
-          imageUrl: post.cover_image ?? undefined,
-        })}
+        twitterCard={post.seo_metadata?.twitter_card === 'summary' ? 'summary' : 'summary_large_image'}
+        twitterTitle={post.seo_metadata?.twitter_title || post.seo_metadata?.og_title || post.seo_metadata?.seo_title || post.title}
+        twitterDescription={post.seo_metadata?.twitter_description || post.seo_metadata?.og_description || post.seo_metadata?.meta_description || post.excerpt || ""}
+        twitterImage={post.seo_metadata?.twitter_image || post.seo_metadata?.og_image || post.cover_image || undefined}
+        noIndex={post.seo_metadata?.robots_index === false}
+        noFollow={post.seo_metadata?.robots_follow === false}
+        schema={[
+          buildArticleSchema({
+            title: post.title,
+            description: post.excerpt,
+            slug: post.slug ?? slug ?? "",
+            publishedAt: post.published_at,
+            modifiedAt: post.updated_at,
+            authorName: post.author?.name ?? "SEO Hub Analyzer Team",
+            imageUrl: post.cover_image ?? undefined,
+            schemaType: post.seo_metadata?.schema_type === 'Article' ? 'Article' : 'BlogPosting',
+          }),
+          {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Home", item: siteUrl("/") },
+              { "@type": "ListItem", position: 2, name: "Blog", item: siteUrl("/blog") },
+              { "@type": "ListItem", position: 3, name: post.title, item: siteUrl(`/blog/${post.slug}`) },
+            ],
+          },
+        ]}
       />
       {/* Sticky Navbar Wrapper */}
       <div className="sticky top-0 z-50 bg-[#faf9f5]/90 backdrop-blur-md border-b border-[#e8e6dc]">
@@ -183,6 +311,16 @@ const BlogPost = () => {
               </div>
             </div>
           )}
+
+          {post.tags.length > 0 && (
+            <ul className="mt-4 flex flex-wrap gap-2" aria-label="Article tags">
+              {post.tags.map((tag) => (
+                <li key={tag.slug} className="rounded-full border border-[#d6d4ca] px-3 py-1 text-[11px] font-medium text-[#5e5d59]">
+                  {tag.name}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </header>
 
@@ -190,7 +328,7 @@ const BlogPost = () => {
       <div className="px-6 max-w-[1100px] mx-auto mb-16 md:mb-24">
         {post.cover_image ? (
            <div className="aspect-[21/9] w-full rounded-[16px] bg-[#e8e6dc] overflow-hidden border border-[#d6d4ca] shadow-sm">
-             <img src={post.cover_image} alt={post.title} className="w-full h-full object-cover" />
+             <img src={post.cover_image} alt={post.seo_metadata?.cover_image_alt || post.title} className="w-full h-full object-cover" />
            </div>
         ) : (
           <div className="aspect-[21/9] w-full rounded-[16px] bg-[#e8e6dc] overflow-hidden relative group border border-[#d6d4ca] shadow-sm">
@@ -256,11 +394,11 @@ const BlogPost = () => {
           <div className="sticky top-32">
             
             {/* Dynamic TOC based on headings */}
-            {post.content?.filter((b: any) => b.type === 'heading').length > 0 && (
+            {contentHeadings.length > 0 && (
               <div className="mb-12">
                 <h4 className="text-[11px] font-bold tracking-[0.2em] uppercase text-[#87867f] mb-6">Contents</h4>
                 <ul className="space-y-4 text-[14px] text-[#5e5d59]">
-                  {post.content.filter((b: any) => b.type === 'heading' && b.level === 2).map((heading: any, i: number) => (
+                  {contentHeadings.filter((heading) => heading.level === 2).map((heading, i) => (
                     <li key={i}>
                       <a href={`#${heading.id}`} className="hover:text-[#c96442] transition-colors block border-l-2 border-transparent hover:border-[#c96442] pl-3 -ml-3">
                         {heading.text}
@@ -307,7 +445,8 @@ const BlogPost = () => {
             {recentBlogs.map((blog) => {
               const Icon = FileText;
               const dateStr = blog.published_at ? new Date(blog.published_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Draft';
-              const colorClass = blog.blog_categories?.color || "bg-[#e8e6dc]";
+              const category = firstRelation(blog.blog_categories);
+              const colorClass = category?.color || "bg-[#e8e6dc]";
               return (
                 <Link 
                   key={blog.id} 

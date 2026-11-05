@@ -32,6 +32,7 @@ const Blog = () => {
           .from("blogs")
           .select("id, title, slug, published_at, cover_image, excerpt, blog_categories(id, name, color)")
           .eq("status", "published")
+          .lte("published_at", new Date().toISOString())
           .order("published_at", { ascending: false }),
         supabase.from("blog_categories").select("id, name, color"),
       ]);

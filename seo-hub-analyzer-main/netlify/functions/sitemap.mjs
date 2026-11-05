@@ -66,11 +66,12 @@ export const handler = async (event) => {
       const supabase = createClient(supabaseUrl, supabaseKey);
       const { data } = await supabase
         .from("blogs")
-        .select("slug, published_at")
+        .select("slug, published_at, seo_metadata")
         .eq("status", "published")
+        .lte("published_at", new Date().toISOString())
         .order("published_at", { ascending: false });
 
-      blogRoutes = (data ?? []).map((post) => ({
+      blogRoutes = (data ?? []).filter((post) => post.seo_metadata?.robots_index !== false).map((post) => ({
         path: `/blog/${post.slug}`,
         changefreq: "monthly",
         priority: 0.7,

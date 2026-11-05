@@ -1,6 +1,7 @@
 // src/components/blog/BlogRenderer.tsx
 import React from 'react';
 import { ArrowRight, CheckCircle2, Zap } from 'lucide-react';
+import { sanitizeBlogHtml } from '@/lib/sanitizeBlogHtml';
 
 export type BlogBlock =
   | { type: 'paragraph'; text: string }
@@ -9,7 +10,8 @@ export type BlogBlock =
   | { type: 'code'; code: string }
   | { type: 'executive_summary'; items: string[] }
   | { type: 'implementation_note'; text: string }
-  | { type: 'image'; url: string; caption?: string; alt?: string };
+  | { type: 'image'; url: string; caption?: string; alt?: string }
+  | { type: 'rich_text'; html: string };
 
 interface BlogRendererProps {
   blocks: BlogBlock[];
@@ -42,7 +44,7 @@ export const BlogRenderer: React.FC<BlogRendererProps> = ({ blocks }) => {
                   {block.items.map((item, i) => (
                     <li key={i} className="flex items-start gap-3">
                       <CheckCircle2 className="h-5 w-5 text-[#c96442] shrink-0 mt-0.5" />
-                      <span dangerouslySetInnerHTML={{ __html: item }} />
+                      <span dangerouslySetInnerHTML={{ __html: sanitizeBlogHtml(item) }} />
                     </li>
                   ))}
                 </ul>
@@ -50,7 +52,7 @@ export const BlogRenderer: React.FC<BlogRendererProps> = ({ blocks }) => {
             );
 
           case 'paragraph':
-            return <p key={index} dangerouslySetInnerHTML={{ __html: block.text }} />;
+            return <p key={index} dangerouslySetInnerHTML={{ __html: sanitizeBlogHtml(block.text) }} />;
 
           case 'heading':
             if (block.level === 2) return <h2 key={index} id={block.id}>{block.text}</h2>;
@@ -60,7 +62,7 @@ export const BlogRenderer: React.FC<BlogRendererProps> = ({ blocks }) => {
           case 'quote':
             return (
               <blockquote key={index}>
-                <p dangerouslySetInnerHTML={{ __html: `"${block.text}"` }} />
+                <p dangerouslySetInnerHTML={{ __html: sanitizeBlogHtml(`"${block.text}"`) }} />
               </blockquote>
             );
 
@@ -74,9 +76,12 @@ export const BlogRenderer: React.FC<BlogRendererProps> = ({ blocks }) => {
           case 'implementation_note':
             return (
               <div key={index} className="my-10 bg-[#f0eee6] border border-[#d6d4ca] rounded-[12px] p-6 text-[16px] text-[#141413] not-prose">
-                <strong>Implementation Note:</strong> <span dangerouslySetInnerHTML={{ __html: block.text }} />
+                <strong>Implementation Note:</strong> <span dangerouslySetInnerHTML={{ __html: sanitizeBlogHtml(block.text) }} />
               </div>
             );
+
+          case 'rich_text':
+            return <div key={index} dangerouslySetInnerHTML={{ __html: sanitizeBlogHtml(block.html) }} />;
 
           case 'image':
             return (

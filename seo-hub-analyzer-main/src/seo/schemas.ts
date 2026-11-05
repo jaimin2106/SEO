@@ -32,7 +32,6 @@ export const organizationSchema = {
     availableLanguage: ["English"],
   },
 };
-
 // ─── 2. WebSite (with SearchAction) ──────────────────────────
 export const websiteSchema = {
   "@context": "https://schema.org",
@@ -136,23 +135,28 @@ export function buildArticleSchema({
   description,
   slug,
   publishedAt,
+  modifiedAt,
   authorName = "SEO Hub Analyzer Team",
   imageUrl,
+  schemaType = "BlogPosting",
 }: {
   title: string;
   description?: string;
   slug: string;
   publishedAt?: string;
+  modifiedAt?: string;
   authorName?: string;
   imageUrl?: string;
+  schemaType?: "Article" | "BlogPosting";
 }) {
   return {
     "@context": "https://schema.org",
-    "@type": "Article",
+    "@type": schemaType,
     headline: title,
     description: description ?? "",
     url: `${SITE_URL}/blog/${slug}`,
-    datePublished: publishedAt ?? new Date().toISOString(),
+    ...(publishedAt ? { datePublished: publishedAt } : {}),
+    ...(modifiedAt ? { dateModified: modifiedAt } : {}),
     author: {
       "@type": "Person",
       name: authorName,

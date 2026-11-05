@@ -72,8 +72,9 @@ async function fetchBlogRoutes() {
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     const { data, error } = await supabase
       .from("blogs")
-      .select("slug, published_at")
+      .select("slug, published_at, seo_metadata")
       .eq("status", "published")
+      .lte("published_at", new Date().toISOString())
       .order("published_at", { ascending: false });
 
     if (error) {
@@ -81,7 +82,7 @@ async function fetchBlogRoutes() {
       return [];
     }
 
-    return (data ?? []).map((post) => ({
+    return (data ?? []).filter((post) => post.seo_metadata?.robots_index !== false).map((post) => ({
       path: `/blog/${post.slug}`,
       changefreq: "monthly",
       priority: 0.7,

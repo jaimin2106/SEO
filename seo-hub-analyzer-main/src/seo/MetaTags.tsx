@@ -23,9 +23,15 @@ export interface MetaTagsProps {
   description: string;
   canonical?: string;
   ogImage?: string;
+  ogTitle?: string;
+  ogDescription?: string;
   ogType?: string;
   twitterCard?: "summary" | "summary_large_image" | "app" | "player";
+  twitterTitle?: string;
+  twitterDescription?: string;
+  twitterImage?: string;
   noIndex?: boolean;
+  noFollow?: boolean;
   /** Inline JSON-LD schema object(s) — pass array for multiple schemas */
   schema?: object | object[];
 }
@@ -39,9 +45,15 @@ const MetaTags = ({
   description,
   canonical,
   ogImage = DEFAULT_OG_IMAGE,
+  ogTitle = title,
+  ogDescription = description,
   ogType = "website",
   twitterCard = "summary_large_image",
+  twitterTitle = ogTitle,
+  twitterDescription = ogDescription,
+  twitterImage = ogImage,
   noIndex = false,
+  noFollow = noIndex,
   schema,
 }: MetaTagsProps) => {
   useEffect(() => {
@@ -96,18 +108,15 @@ const MetaTags = ({
     setMeta('meta[name="description"]', description);
     setMeta('meta[name="author"]', BRAND_NAME);
 
-    if (noIndex) {
-      setMeta('meta[name="robots"]', "noindex, nofollow");
-    } else {
-      setMeta('meta[name="robots"]', "index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1");
-    }
+    const robots = `${noIndex ? "noindex" : "index"}, ${noFollow ? "nofollow" : "follow"}`;
+    setMeta('meta[name="robots"]', noIndex ? robots : `${robots}, max-snippet:-1, max-image-preview:large, max-video-preview:-1`);
 
     // ── Canonical ──────────────────────────────────────────
     if (canonical) setLink("canonical", canonical);
 
     // ── Open Graph ─────────────────────────────────────────
-    setMeta('meta[property="og:title"]', title);
-    setMeta('meta[property="og:description"]', description);
+    setMeta('meta[property="og:title"]', ogTitle);
+    setMeta('meta[property="og:description"]', ogDescription);
     setMeta('meta[property="og:type"]', ogType);
     setMeta('meta[property="og:image"]', ogImage);
     setMeta('meta[property="og:image:width"]', "1200");
@@ -117,9 +126,9 @@ const MetaTags = ({
 
     // ── Twitter Card ───────────────────────────────────────
     setMeta('meta[name="twitter:card"]', twitterCard);
-    setMeta('meta[name="twitter:title"]', title);
-    setMeta('meta[name="twitter:description"]', description);
-    setMeta('meta[name="twitter:image"]', ogImage);
+    setMeta('meta[name="twitter:title"]', twitterTitle);
+    setMeta('meta[name="twitter:description"]', twitterDescription);
+    setMeta('meta[name="twitter:image"]', twitterImage);
     if (TWITTER_HANDLE) {
       setMeta('meta[name="twitter:site"]', TWITTER_HANDLE);
     }
@@ -136,7 +145,7 @@ const MetaTags = ({
         .querySelectorAll('script[data-seo="true"]')
         .forEach((s) => s.remove());
     };
-  }, [title, description, canonical, ogImage, ogType, twitterCard, noIndex, schema]);
+  }, [title, description, canonical, ogImage, ogTitle, ogDescription, ogType, twitterCard, twitterTitle, twitterDescription, twitterImage, noIndex, noFollow, schema]);
 
   // Renders nothing — side-effect only
   return null;

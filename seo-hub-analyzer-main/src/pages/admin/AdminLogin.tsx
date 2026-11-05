@@ -28,12 +28,17 @@ const AdminLogin: React.FC = () => {
     e.preventDefault();
     setError(null);
     setIsSubmitting(true);
-    const { error: loginError } = await signInAdmin(email.trim(), password);
-    if (loginError) {
-      setError(loginError);
+    try {
+      const { error: loginError } = await signInAdmin(email.trim(), password);
+      if (loginError) {
+        setError(loginError);
+      } else {
+        navigate('/admin/dashboard', { replace: true });
+      }
+    } catch (loginError) {
+      setError(loginError instanceof Error ? loginError.message : 'Unable to sign in. Please try again.');
+    } finally {
       setIsSubmitting(false);
-    } else {
-      navigate('/admin/dashboard', { replace: true });
     }
   };
 

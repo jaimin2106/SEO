@@ -94,6 +94,7 @@ function rowToProfile(row: DbUserRow): UserProfile {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const userRef = useRef<User | null>(null);
   // isLoading is ONLY true during the initial cold-start check.
   // It must NEVER be set back to true during normal auth transitions.
   const [isLoading, setIsLoading] = useState(true);
@@ -206,6 +207,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // isLoading is already true (initial state) — no need to set it again.
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
+        userRef.current = session.user;
         setUser(session.user);
         await ensureProfile(session.user.id);
         subscribeRealtime(session.user.id);
@@ -218,30 +220,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for future auth changes (login, logout, token refresh, magic link callback, OTP verify)
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       // If the initial getSession hasn't completed yet, skip — it will handle it.
       if (!initDoneRef.current && event !== "SIGNED_OUT") return;
 
       if (session?.user) {
         // Update user state immediately for instant navbar/UI update
+        userRef.current = session.user;
         setUser(session.user);
-        // Fetch/ensure profile without touching isLoading (avoids flicker)
-        await ensureProfile(session.user.id);
-        subscribeRealtime(session.user.id);
+        const currentUser = session.user;
 
-        if (event === "SIGNED_IN") {
-          toast.success("Signed in successfully!");
-          trackEvent({ userId: session.user.id, action: 'LOGIN' });
-        }
+        // Return from the auth callback before making requests with the Supabase client.
+        window.setTimeout(() => {
+          void ensureProfile(currentUser.id).then(() => subscribeRealtime(currentUser.id));
+
+          if (event === "SIGNED_IN") {
+            toast.success("Signed in successfully!");
+            void trackEvent({ userId: currentUser.id, action: 'LOGIN' });
+          }
+        }, 0);
       } else {
         // Signed out — clean up
-        if (user) trackEvent({ userId: user.id, action: 'LOGOUT' });
+        const previousUser = userRef.current;
+        userRef.current = null;
+        if (previousUser) {
+          window.setTimeout(() => {
+            void trackEvent({ userId: previousUser.id, action: 'LOGOUT' });
+          }, 0);
+        }
         setUser(null);
         setProfile(null);
         queryClient.clear();
         if (realtimeChannelRef.current) {
-          supabase.removeChannel(realtimeChannelRef.current);
+          const channel = realtimeChannelRef.current;
           realtimeChannelRef.current = null;
+          window.setTimeout(() => {
+            void supabase.removeChannel(channel);
+          }, 0);
         }
       }
     });

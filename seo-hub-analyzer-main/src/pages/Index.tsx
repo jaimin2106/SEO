@@ -13,23 +13,28 @@ import { organizationSchema, websiteSchema, softwareApplicationSchema } from "@/
 const Index = () => {
   const meta = PAGE_META.home;
   return (
-    <main className="min-h-screen font-sans bg-[#f5f4ed]">
+    <>
       <MetaTags
         title={meta.title}
         description={meta.description}
         canonical={meta.canonical}
         ogImage={meta.ogImage}
+        ogTitle={meta.ogTitle}
+        ogDescription={meta.ogDescription}
+        twitterCard="summary_large_image"
         schema={[organizationSchema, websiteSchema, softwareApplicationSchema]}
       />
-      <Hero />
-      <VisualPreview />
-      <Features />
-      <HowItWorks />
-      <BlogSection />
-      <Pricing />
-      <FinalCta />
+      <main className="min-h-screen font-sans bg-[#f5f4ed]">
+        <Hero />
+        <VisualPreview />
+        <Features />
+        <HowItWorks />
+        <BlogSection />
+        <Pricing />
+        <FinalCta />
+      </main>
       <Footer />
-    </main>
+    </>
   );
 };
 

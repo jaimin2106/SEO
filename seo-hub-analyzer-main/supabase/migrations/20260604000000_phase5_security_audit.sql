@@ -36,21 +36,6 @@ CREATE TABLE IF NOT EXISTS public.user_roles (
   UNIQUE (user_id, role_id)
 );
 
--- RLS: admin_roles are public-readable (needed by RLS functions)
-ALTER TABLE public.admin_roles ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS "Admin roles are readable by authenticated users"
-  ON public.admin_roles FOR SELECT
-  TO authenticated USING (true);
-
--- RLS: user_roles — only admins can read/write
-ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS "Admins can manage user_roles"
-  ON public.user_roles FOR ALL
-  TO authenticated
-  USING (public.is_admin(auth.uid()))
-  WITH CHECK (public.is_admin(auth.uid()));
-
-
 -- ----------------------------------------------------------------
 -- FIX 2: Create public.is_admin(uuid) — STABLE, SECURITY DEFINER
 -- Checks if a given user has any recognized admin role.
@@ -76,6 +61,25 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.is_admin(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.is_admin(uuid) TO service_role;
+
+-- RLS: role metadata is readable by signed-in users; role assignments
+-- remain readable and writable only by existing admins.
+ALTER TABLE public.admin_roles ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Admin roles are readable by authenticated users" ON public.admin_roles;
+CREATE POLICY "Admin roles are readable by authenticated users"
+  ON public.admin_roles FOR SELECT
+  TO authenticated USING (true);
+
+ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Admins can manage user_roles" ON public.user_roles;
+CREATE POLICY "Admins can manage user_roles"
+  ON public.user_roles FOR ALL
+  TO authenticated
+  USING (public.is_admin(auth.uid()))
+  WITH CHECK (public.is_admin(auth.uid()));
+
+GRANT SELECT ON public.admin_roles TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.user_roles TO authenticated;
 
 
 -- ----------------------------------------------------------------

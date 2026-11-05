@@ -15,14 +15,16 @@ const FinalCta = () => {
             
             <div className="relative z-10">
               <h2 className="font-serif text-[42px] font-medium leading-[1.1] tracking-tight text-[#faf9f5] sm:text-[56px]">
-                Start your technical analysis.
+                Start Understanding Your Website&apos;s SEO Performance.
               </h2>
               <p className="mx-auto mt-6 max-w-[32rem] text-[18px] leading-[1.6] text-[#b0aea5]">
-                Initiate a complete crawl to validate technical architecture, performance signals, and indexing directives.
+                Run a website SEO analysis to uncover technical issues, evaluate
+                Core Web Vitals and find actionable opportunities to improve
+                your website.
               </p>
               
               <div className="mx-auto mt-12 max-w-[38rem]">
-                <UrlAnalyzer />
+                <UrlAnalyzer submitLabel="Analyze Your Website Free" />
               </div>
             </div>
           </div>

@@ -119,8 +119,6 @@ const MetaTags = ({
     setMeta('meta[property="og:description"]', ogDescription);
     setMeta('meta[property="og:type"]', ogType);
     setMeta('meta[property="og:image"]', ogImage);
-    setMeta('meta[property="og:image:width"]', "1200");
-    setMeta('meta[property="og:image:height"]', "630");
     setMeta('meta[property="og:site_name"]', BRAND_NAME);
     if (canonical) setMeta('meta[property="og:url"]', canonical);
 

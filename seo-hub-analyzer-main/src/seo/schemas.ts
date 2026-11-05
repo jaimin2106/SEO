@@ -19,12 +19,11 @@ export const organizationSchema = {
   logo: {
     "@type": "ImageObject",
     url: LOGO_URL,
-    width: 200,
-    height: 60,
+    width: 180,
+    height: 180,
   },
   description:
     "SEO Hub Analyzer is an AI-powered website intelligence platform that scans any URL and delivers clear, actionable SEO reports covering technical issues, performance, and Core Web Vitals.",
-  foundingDate: "2024",
   contactPoint: {
     "@type": "ContactPoint",
     contactType: "customer support",
@@ -32,22 +31,14 @@ export const organizationSchema = {
     availableLanguage: ["English"],
   },
 };
-// ─── 2. WebSite (with SearchAction) ──────────────────────────
+// ─── 2. WebSite ──────────────────────────────────────────────
 export const websiteSchema = {
   "@context": "https://schema.org",
   "@type": "WebSite",
   name: "SEO Hub Analyzer",
   url: SITE_URL,
   description:
-    "AI-powered SEO analysis tool — scan any website, identify technical issues, and get actionable fix recommendations in seconds.",
-  potentialAction: {
-    "@type": "SearchAction",
-    target: {
-      "@type": "EntryPoint",
-      urlTemplate: `${SITE_URL}/blog?q={search_term_string}`,
-    },
-    "query-input": "required name=search_term_string",
-  },
+    "AI-assisted website SEO analysis for technical issues, on-page signals and available page performance data.",
 };
 
 // ─── 3. SoftwareApplication (Homepage) ───────────────────────
@@ -59,26 +50,24 @@ export const softwareApplicationSchema = {
   operatingSystem: "Web",
   url: SITE_URL,
   description:
-    "An AI-powered SEO analysis platform that crawls websites, identifies technical SEO issues, measures Core Web Vitals, and delivers prioritized remediation guidance.",
-  screenshot: `${SITE_URL}/og/screenshot.png`,
+    "An AI-assisted website SEO analyzer for technical checks, on-page signals, PageSpeed Insights lab results and actionable recommendations.",
   featureList: [
     "Technical SEO audit",
-    "Core Web Vitals analysis",
-    "On-page optimization checks",
-    "Crawlability & robots.txt validation",
-    "AI-generated fix recommendations",
-    "PDF report export",
-    "Mobile & desktop preview",
-    "Historical tracking",
+    "Page title and meta description checks",
+    "Heading, link and image alt analysis",
+    "Canonical, robots and structured data checks",
+    "PageSpeed Insights Lighthouse lab performance results",
+    "AI-assisted recommendations",
+    "PDF report exports",
+    "Mobile and desktop analysis",
   ],
-  softwareVersion: "2.0",
   offers: [
     {
       "@type": "Offer",
       name: "Free Plan",
       price: "0",
       priceCurrency: "USD",
-      description: "5 lifetime reports, partial report access, mobile & desktop preview.",
+      description: "Free website SEO analysis plan.",
     },
     {
       "@type": "Offer",
@@ -91,7 +80,7 @@ export const softwareApplicationSchema = {
         priceCurrency: "USD",
         unitText: "MONTH",
       },
-      description: "50 reports/month, full forensic SEO analysis, AI remediation prompts, PDF export.",
+      description: "Website SEO analysis subscription.",
     },
     {
       "@type": "Offer",
@@ -104,7 +93,7 @@ export const softwareApplicationSchema = {
         priceCurrency: "USD",
         unitText: "MONTH",
       },
-      description: "100 reports/month, white-label PDFs, team workspace, priority support.",
+      description: "Website SEO analysis subscription for teams.",
     },
   ],
 };

@@ -18,33 +18,37 @@ export interface PageMeta {
   canonical: string;
   keywords: string[];
   ogImage?: string;
+  ogTitle?: string;
+  ogDescription?: string;
   ogType?: string;
 }
 
 export const PAGE_META: Record<string, PageMeta> = {
   // ── Homepage ────────────────────────────────────────────────
   home: {
-    title: "SEO Hub Analyzer — AI-Powered Website SEO Analysis Tool",
+    title: "SEO Hub Analyzer – AI Website SEO Audit & Core Web Vitals",
     description:
-      "Scan any website and get a clear, actionable SEO report. Fix technical issues, improve rankings, and boost performance — free.",
+      "Analyze your site with an AI-powered SEO analyzer. Find technical SEO issues, check Core Web Vitals and performance, and discover actionable SEO improvements.",
     canonical: `${BASE}/`,
     keywords: [
-      "SEO analyzer",
+      "AI website SEO analyzer",
       "website SEO audit",
       "technical SEO tool",
-      "free SEO checker",
       "on-page SEO analysis",
-      "Core Web Vitals checker",
-      "SEO report generator",
+      "Core Web Vitals analysis",
+      "Google SEO audit",
     ],
-    ogImage: `${BASE}/og/home.png`,
+    ogImage: `${BASE}/apple-touch-icon.png`,
+    ogTitle: "AI Website SEO Analyzer & Core Web Vitals Audit | SEO Hub",
+    ogDescription:
+      "Discover technical SEO issues, evaluate Core Web Vitals and uncover actionable website optimization opportunities with SEO Hub Analyzer.",
   },
 
   // ── Pricing ─────────────────────────────────────────────────
   pricing: {
     title: "SEO Hub Analyzer Pricing — Free, Pro & Scale Plans",
     description:
-      "Start free with 5 lifetime reports. Upgrade to Pro or Scale for unlimited forensic SEO analysis, PDF exports, and AI remediation prompts.",
+      "Start free with 5 lifetime reports. Choose Pro for 50 monthly reports or Scale for 100, with advanced SEO analysis, PDF exports and AI recommendations.",
     canonical: `${BASE}/pricing`,
     keywords: [
       "SEO analyzer pricing",

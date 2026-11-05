@@ -4,18 +4,18 @@ import Reveal from "./Reveal";
 const steps = [
   { 
     icon: Activity, 
-    title: "Start audit", 
-    desc: "Enter a domain to launch a live crawl across technical, rendering, and performance layers." 
+    title: "Scan your website",
+    desc: "Enter a page URL to start a technical SEO and performance analysis."
   },
   { 
     icon: LayoutList, 
-    title: "Validate site signals", 
-    desc: "Review crawlability, metadata, Core Web Vitals, and rendered output in one structured view." 
+    title: "Validate the findings",
+    desc: "Review the evidence, affected page and relevant SEO check alongside available PageSpeed Insights results."
   },
   { 
     icon: Code2, 
-    title: "Prioritized remediation", 
-    desc: "Export severity-ranked issues with implementation context for engineering or content teams." 
+    title: "Prioritize next steps",
+    desc: "Use severity-ranked findings and recommendations to plan technical, performance and on-page improvements."
   },
 ];
 
@@ -26,11 +26,16 @@ const HowItWorks = () => {
         <Reveal className="max-w-[1200px] mx-auto grid lg:grid-cols-12 gap-16 lg:gap-24 items-start">
           
           <div className="lg:col-span-5 lg:sticky lg:top-32">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.2em] text-[#87867f]">
+              FROM DETECTION TO ACTION
+            </p>
             <h2 className="text-[42px] leading-[1.1] tracking-tight font-serif font-medium text-[#141413] sm:text-[48px]">
-              Built for rapid issue triage.
+              Find SEO Problems. Understand Their Impact. Prioritize the Fixes.
             </h2>
             <p className="mt-6 text-[18px] leading-[1.6] text-[#5e5d59]">
-              Run a crawl, review detected issues, and hand off prioritized fixes without slowing down content or engineering workflows.
+              A website audit is most useful when it helps you decide what to
+              do next. Review detected issues and recommendations, then focus
+              on the improvements that matter to your site.
             </p>
           </div>
 

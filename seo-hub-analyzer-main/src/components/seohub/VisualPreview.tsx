@@ -43,20 +43,24 @@ const VisualPreview = () => {
               className="inline-flex items-center gap-2 rounded-full border border-[#e8e6dc] bg-[#faf9f5] px-3 py-1 text-[12px] font-medium text-[#c96442] shadow-[0_0_0_1px_#e8e6dc] cursor-default"
             >
               <span className="h-1.5 w-1.5 rounded-full bg-[#c96442] animate-pulse" />
-              Deep Scan Engine
+              COMPLETE WEBSITE SEO ANALYSIS
             </motion.div>
 
             <h2 className="mt-6 text-[42px] leading-[1.1] tracking-tight text-[#141413] font-serif font-medium sm:text-[56px]">
-              Analyze and fix issues in unlimited depth and width.
+              Analyze Website SEO Issues in Depth.
             </h2>
             <p className="mt-6 text-[18px] leading-[1.6] text-[#5e5d59]">
-              Instantly understand what blocks growth with snapshots, issue clusters, and performance signals in one coherent view. No more guesswork, just a clear path to ranked growth.
+              Get a clearer picture of your website&apos;s SEO health. Review
+              technical errors, on-page optimization gaps, performance signals
+              and content structure that can affect search visibility.
             </p>
             <ul className="mt-8 space-y-4 text-[16px] text-[#4d4c48]">
               {[
-                { icon: Layers, text: "Detect hidden content bottlenecks" },
-                { icon: Zap, text: "See weak UX patterns instantly" },
-                { icon: Activity, text: "Prioritize high-impact SEO fixes" }
+                { icon: Layers, text: "Review titles, descriptions and heading structure" },
+                { icon: Zap, text: "Check canonical, robots and structured data signals" },
+                { icon: Activity, text: "Evaluate mobile and desktop performance" },
+                { icon: Layers, text: "Identify missing image alt attributes" },
+                { icon: Zap, text: "Review internal and external link structure" },
               ].map((item, i) => (
                 <motion.li 
                   key={i}
@@ -80,10 +84,10 @@ const VisualPreview = () => {
                 whileTap={{ y: 0 }}
               >
                 <Link
-                  to="/sample-report"
+                  to="/#features"
                   className="inline-flex h-12 items-center justify-center rounded-[8px] bg-[#e8e6dc] px-6 text-[15px] font-medium text-[#4d4c48] transition-colors hover:bg-[#d1cfc5] shadow-[0_0_0_1px_#d1cfc5]"
                 >
-                  Explore report structure
+                  Explore Website Analysis
                 </Link>
               </motion.div>
             </div>
@@ -161,16 +165,16 @@ const VisualPreview = () => {
                 transition={{ type: "spring", stiffness: 300, damping: 20 }}
                 className="rounded-[12px] border border-[#e8e6dc] bg-[#faf9f5] p-5 shadow-[0_4px_24px_rgba(0,0,0,0.02)] transition-colors cursor-default"
               >
-                <h3 className="font-serif text-[24px] font-medium text-[#141413]">JS Rendering</h3>
-                <p className="mt-1 text-[14px] text-[#5e5d59]">Executes full hydration to catch client-side blocking issues.</p>
+                <h3 className="font-serif text-[24px] font-medium text-[#141413]">On-Page Signals</h3>
+                <p className="mt-1 text-[14px] text-[#5e5d59]">Reviews available page markup, metadata, headings and links.</p>
               </motion.div>
               <motion.div 
                 whileHover={{ y: -4, backgroundColor: "#ffffff" }}
                 transition={{ type: "spring", stiffness: 300, damping: 20 }}
                 className="rounded-[12px] border border-[#e8e6dc] bg-[#faf9f5] p-5 shadow-[0_4px_24px_rgba(0,0,0,0.02)] transition-colors cursor-default"
               >
-                 <h3 className="font-serif text-[24px] font-medium text-[#141413]">CrUX API</h3>
-                 <p className="mt-1 text-[14px] text-[#5e5d59]">Validates performance data against real-world user metrics.</p>
+                 <h3 className="font-serif text-[24px] font-medium text-[#141413]">PageSpeed Insights</h3>
+                 <p className="mt-1 text-[14px] text-[#5e5d59]">Shows Lighthouse lab measurements, not real-user field data.</p>
               </motion.div>
             </div>
           </Reveal>

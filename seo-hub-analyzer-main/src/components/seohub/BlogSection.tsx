@@ -6,40 +6,23 @@ import { supabase } from "@/lib/supabase";
 type BlogCard = {
   id: string;
   title: string;
-  published_at: string;
+  published_at: string | null;
   color: string;
   Icon: ElementType;
   slug: string;
   cover_image?: string | null;
 };
 
-// Fallback mocks — used while loading or if DB has fewer than 3 posts
-const MOCK_BLOGS: BlogCard[] = [
-  {
-    id: "mock-1",
-    title: "SEO Managed Agents: dreaming, outcomes, and multiagent orchestration",
-    published_at: "2026-05-06T00:00:00Z",
-    color: "bg-[#d1c4e9]",
-    Icon: Globe,
-    slug: "seo-managed-agents",
-  },
-  {
-    id: "mock-2",
-    title: "New connectors in SEO Hub for everyday life",
-    published_at: "2026-04-23T00:00:00Z",
-    color: "bg-[#b3e5fc]",
-    Icon: Zap,
-    slug: "new-connectors",
-  },
-  {
-    id: "mock-3",
-    title: "Built-in memory for SEO Managed Agents",
-    published_at: "2026-04-23T00:00:00Z",
-    color: "bg-[#ffccbc]",
-    Icon: FileText,
-    slug: "built-in-memory",
-  },
-];
+type BlogQueryRow = {
+  id: string;
+  title: string;
+  slug: string;
+  published_at: string | null;
+  cover_image: string | null;
+  blog_categories: { name: string | null; color: string | null } |
+    { name: string | null; color: string | null }[] |
+    null;
+};
 
 const ICON_MAP: Record<string, React.ElementType> = {
   Engineering: Code,
@@ -59,14 +42,15 @@ const COLOR_MAP: Record<string, string> = {
   "Core Web Vitals": "bg-[#c8e6c9]",
 };
 
-function normalizeBlogs(data: any[]): BlogCard[] {
+function normalizeBlogs(data: BlogQueryRow[]): BlogCard[] {
   return data.map((b) => {
-    const catName = b.blog_categories?.name ?? "";
+    const category = Array.isArray(b.blog_categories) ? b.blog_categories[0] : b.blog_categories;
+    const catName = category?.name ?? "";
     return {
       id: b.id,
-      title: b.title,
+      title: b.title.trim().replace(/\s+/g, " "),
       published_at: b.published_at,
-      color: b.blog_categories?.color ?? COLOR_MAP[catName] ?? "bg-[#e8e6dc]",
+      color: category?.color ?? COLOR_MAP[catName] ?? "bg-[#e8e6dc]",
       Icon: ICON_MAP[catName] ?? FileText,
       slug: b.slug,
       cover_image: b.cover_image ?? null,
@@ -77,34 +61,31 @@ function normalizeBlogs(data: any[]): BlogCard[] {
 const BlogSection = () => {
   const [blogs, setBlogs] = useState<BlogCard[]>([]);
   const [loading, setLoading] = useState(true);
+  const [blogError, setBlogError] = useState(false);
 
   useEffect(() => {
     const fetchBlogs = async () => {
-      const { data } = await supabase
-        .from("blogs")
-        .select("id, title, slug, published_at, cover_image, blog_categories(name, color)")
-        .eq("status", "published")
-        .order("published_at", { ascending: false })
-        .limit(3);
+      try {
+        const { data, error } = await supabase
+          .from("blogs")
+          .select("id, title, slug, published_at, cover_image, blog_categories(name, color)")
+          .eq("status", "published")
+          .lte("published_at", new Date().toISOString())
+          .order("published_at", { ascending: false })
+          .limit(3);
 
-      if (data && data.length > 0) {
-        const normalized = normalizeBlogs(data);
-        // Pad with mocks if fewer than 3 published posts
-        const padded = [
-          ...normalized,
-          ...MOCK_BLOGS.slice(normalized.length),
-        ].slice(0, 3);
-        setBlogs(padded);
-      } else {
-        setBlogs(MOCK_BLOGS);
+        if (error) throw error;
+        setBlogs(normalizeBlogs(data ?? []));
+      } catch (error) {
+        console.error("Failed to load homepage blog articles:", error);
+        setBlogError(true);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
-    fetchBlogs();
+    void fetchBlogs();
   }, []);
-
-  const displayBlogs = blogs.length > 0 ? blogs : MOCK_BLOGS;
 
   return (
     <section
@@ -119,13 +100,13 @@ const BlogSection = () => {
               className="text-[12px] uppercase tracking-[0.22em] font-semibold mb-4"
               style={{ color: "#87867f", WebkitFontSmoothing: "antialiased" }}
             >
-              Resources
+              SEO KNOWLEDGE HUB
             </p>
             <h2
               className="text-[36px] md:text-[46px] leading-[1.1] text-[#faf9f5]"
               style={{ fontFamily: "'Georgia', 'Times New Roman', serif", fontWeight: 400 }}
             >
-              Latest insights on technical SEO&nbsp;&amp;&nbsp;performance.
+              Learn How to Improve Core Web Vitals and Website SEO.
             </h2>
           </div>
 
@@ -149,9 +130,9 @@ const BlogSection = () => {
               <div key={i} className="h-72 rounded-[20px] bg-[#1f1e1a] animate-pulse border border-[#30302e]" />
             ))}
           </div>
-        ) : (
+        ) : blogs.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-4 -mt-4">
-            {displayBlogs.map((blog) => {
+            {blogs.map((blog) => {
               const Icon = blog.Icon ?? FileText;
               const dateStr = blog.published_at
                 ? new Date(blog.published_at).toLocaleDateString("en-US", {
@@ -162,8 +143,8 @@ const BlogSection = () => {
                 : "";
 
               return (
+                <article key={blog.id} className="h-full">
                 <Link
-                  key={blog.id}
                   to={`/blog/${blog.slug}`}
                   className="blog-card flex flex-col rounded-[20px] overflow-hidden bg-[#1f1e1a] border border-[#30302e] h-full"
                   style={{
@@ -247,9 +228,16 @@ const BlogSection = () => {
                     </div>
                   </div>
                 </Link>
+                </article>
               );
             })}
           </div>
+        ) : (
+          <p role={blogError ? "alert" : "status"} className="py-12 text-center text-[14px] text-[#b0aea5]">
+            {blogError
+              ? "Published SEO articles are temporarily unavailable."
+              : "New SEO guides will appear here when published."}
+          </p>
         )}
       </div>
     </section>

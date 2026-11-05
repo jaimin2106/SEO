@@ -3,10 +3,10 @@ import { CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
 
 const benefits = [
-  "No credit card required",
-  "5 free audits",
-  "Desktop + Mobile analysis",
-  "PDF report export",
+  "5 Free Website Audits",
+  "No Credit Card Required",
+  "Mobile & Desktop Analysis",
+  "PDF Report Exports",
 ];
 
 const Hero = () => {
@@ -32,7 +32,7 @@ const Hero = () => {
               }}
               className="mb-4 text-[12px] font-semibold uppercase tracking-[0.2em] text-[#87867f]"
             >
-              AI-Powered Website SEO Analysis & Auditing
+              AI-POWERED WEBSITE SEO ANALYSIS
             </motion.p>
 
             {/* Main Heading */}
@@ -45,9 +45,10 @@ const Hero = () => {
                 duration: 0.58,
                 ease: [0.22, 1, 0.36, 1],
               }}
-              className="max-w-[14ch] font-serif text-[42px] font-medium leading-[1.05] tracking-[-0.04em] text-[#141413] sm:text-[56px] lg:text-[62px]"
+              className="max-w-[18ch] font-serif text-[42px] font-medium leading-[1.05] tracking-[-0.04em] text-[#141413] sm:text-[56px] lg:text-[62px]"
             >
-              Find What&apos;s Holding Your Website Back.
+       Find Issues, Get Fixes.
+
             </motion.h1>
 
             {/* Description */}
@@ -61,10 +62,8 @@ const Hero = () => {
               }}
               className="mt-6 max-w-[32rem] text-[17px] leading-[1.65] text-[#5e5d59] sm:text-[18px]"
             >
-              Analyze your website with an AI-powered SEO analyzer. Identify
-              technical SEO issues, evaluate Core Web Vitals, check on-page
-              optimization, and uncover actionable opportunities to improve
-              your website&apos;s search visibility and performance.
+           Uncover technical SEO issues, analyze Core Web Vitals, and discover
+  actionable insights to improve your website&apos;s search performance.
             </motion.p>
 
             {/* Trust Indicators */}
@@ -78,32 +77,8 @@ const Hero = () => {
               }}
               className="mb-3 mt-8 flex items-center gap-2"
             >
-              <div
-                className="flex -space-x-2"
-                aria-hidden="true"
-              >
-                <img
-                  className="h-6 w-6 rounded-full border-2 border-[#f5f4ed]"
-                  src="https://i.pravatar.cc/100?img=1"
-                  alt=""
-                  loading="lazy"
-                />
-                <img
-                  className="h-6 w-6 rounded-full border-2 border-[#f5f4ed]"
-                  src="https://i.pravatar.cc/100?img=2"
-                  alt=""
-                  loading="lazy"
-                />
-                <img
-                  className="h-6 w-6 rounded-full border-2 border-[#f5f4ed]"
-                  src="https://i.pravatar.cc/100?img=3"
-                  alt=""
-                  loading="lazy"
-                />
-              </div>
-
               <p className="text-[11px] font-medium text-[#5e5d59]">
-                Built for marketers, SEO professionals and website owners.
+                For marketers, SEO professionals and website owners.
               </p>
             </motion.div>
 

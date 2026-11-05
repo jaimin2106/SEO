@@ -9,7 +9,7 @@ const tiers = [
     name: "Free",
     price: "$0",
     period: "",
-    desc: "Try before committing",
+    desc: "Start with a free website SEO analysis.",
     features: ["5 reports lifetime", "Partial report access", "Mobile & desktop preview", "AI summary preview", "Watermarked PDF export"],
     cta: "Start Free",
     highlight: false,
@@ -18,7 +18,7 @@ const tiers = [
     name: "Pro",
     price: "$29",
     period: "/month",
-    desc: "For serious optimization",
+    desc: "For regular website SEO analysis.",
     features: ["50 reports / month", "Full forensic SEO analysis", "Complete report unlock", "Premium PDF exports", "AI remediation prompts", "Performance analysis", "Historical tracking"],
     cta: "Start Pro",
     highlight: true,
@@ -27,7 +27,7 @@ const tiers = [
     name: "Scale",
     price: "$99",
     period: "/month",
-    desc: "For agencies & teams",
+    desc: "For teams with ongoing analysis needs.",
     features: ["100 reports / month", "Full site crawling", "Team workspace", "White-label PDF exports", "Advanced AI exports", "Priority support", "Advanced dashboard"],
     cta: "Start Scale",
     highlight: false,
@@ -35,10 +35,46 @@ const tiers = [
 ];
 
 const faqs = [
-  { q: "Do I need a credit card for the Free plan?", a: "No, you can sign up and generate up to 5 lifetime reports completely free, no credit card required." },
-  { q: "Can I upgrade or downgrade anytime?", a: "Yes, you can manage your subscription directly from your dashboard and changes will take effect at the end of your billing cycle." },
-  { q: "What is a 'Report'?", a: "A single report consumes 1 credit and analyzes one specific URL for technical SEO, UX, performance, and keyword intelligence." },
-  { q: "Are the PDF exports customizable?", a: "Pro users get premium unbranded PDFs. Scale users can upload their own logo to generate fully white-labeled reports for clients." },
+  {
+    q: "What are Core Web Vitals?",
+    a: "Core Web Vitals are Google's user-experience metrics for loading (LCP), interaction responsiveness (INP) and visual stability (CLS). The performance view here uses available Lighthouse lab data, not real-user field measurements.",
+  },
+  {
+    q: "How do Core Web Vitals affect SEO?",
+    a: "Core Web Vitals are part of Google's page-experience signals, but they are not the only factor that determines search rankings. Content relevance and many other signals also matter.",
+  },
+  {
+    q: "How can I improve Core Web Vitals?",
+    a: "Start with the specific LCP, INP or CLS opportunities in your report, then test changes. SEO Hub Analyzer highlights issues and recommendations; it does not automatically change your website.",
+  },
+  {
+    q: "What does a Google SEO audit check?",
+    a: "This analyzer reviews available page titles, meta descriptions, headings, link structure, canonical and robots directives, structured data, image alt attributes and performance signals. It does not replace Google Search Console.",
+  },
+  {
+    q: "What is an AI SEO analyzer?",
+    a: "An AI SEO analyzer combines website checks with AI-assisted summaries or recommendations to help explain findings. Recommendations are guidance, not a guarantee of ranking improvements.",
+  },
+  {
+    q: "How does a website SEO analyzer work?",
+    a: "Submit a page URL to generate an SEO report. Review the detected on-page and technical signals alongside available mobile and desktop PageSpeed Insights results.",
+  },
+  {
+    q: "What does a technical SEO audit include?",
+    a: "The report can include page metadata, heading structure, links, canonical and robots signals, structured data, image alt attributes and performance diagnostics.",
+  },
+  {
+    q: "How can I identify website SEO issues?",
+    a: "Run an analysis and review each finding's evidence, affected page and recommended next step. Validate important changes on your site after implementation.",
+  },
+  {
+    q: "Can I analyze mobile and desktop website performance?",
+    a: "Yes. The analyzer requests PageSpeed Insights results for mobile and desktop. These Lighthouse results are simulated lab measurements, not CrUX or other real-user field data.",
+  },
+  {
+    q: "How can I track Core Web Vitals for SEO success?",
+    a: "Compare reports over time where your plan provides report history. For real-user Core Web Vitals trends, use Google Search Console or CrUX field data alongside lab testing.",
+  },
 ];
 
 const Pricing = () => {
@@ -48,11 +84,15 @@ const Pricing = () => {
 
       <div className="container-page relative z-10">
         <Reveal className="mx-auto max-w-3xl text-center">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.2em] text-[#87867f]">
+            SIMPLE, TRANSPARENT PRICING
+          </p>
           <h2 className="text-[42px] leading-[1.1] tracking-tight font-serif font-medium text-[#141413] sm:text-[56px]">
-            Transparent value.
+            The Right SEO Analysis Plan for Every Website.
           </h2>
           <p className="mt-6 text-[18px] leading-[1.6] text-[#5e5d59]">
-            Choose the plan that matches your growth. Cancel anytime.
+            Start with free website SEO audits, explore performance insights and
+            choose a plan that fits your website analysis needs.
           </p>
         </Reveal>
 
@@ -75,7 +115,7 @@ const Pricing = () => {
                     transition={{ delay: 0.5 }}
                     className="absolute -top-3 left-8 rounded-[8px] bg-[#c96442] px-3 py-1 text-[11px] font-medium uppercase tracking-wide text-[#faf9f5] shadow-sm"
                   >
-                    Most popular
+                    Featured plan
                   </motion.span>
                 )}
                 <h3 className="font-serif text-[28px] font-medium text-[#141413]">{t.name}</h3>
@@ -130,22 +170,29 @@ const Pricing = () => {
           </div>
         </Reveal>
 
-        {/* ROI & Social Proof */}
+        {/* Practical value */}
         <Reveal delayMs={200}>
            <div className="mt-32 max-w-4xl mx-auto border-t border-[#e8e6dc] pt-20">
-              <h3 className="text-center text-[32px] font-serif font-medium mb-12">The Return on Intelligence</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+              <h2 className="text-center text-[32px] font-serif font-medium mb-5">
+                Turn Website SEO Data Into Better Decisions.
+              </h2>
+              <p className="mx-auto mb-12 max-w-2xl text-center text-[16px] leading-[1.6] text-[#5e5d59]">
+                Understand your website&apos;s technical health, identify
+                optimization opportunities and prioritize the work that can
+                improve performance and search visibility.
+              </p>
+              <div className="grid grid-cols-1 gap-8 text-center md:grid-cols-3">
                  <div>
-                   <div className="text-[48px] font-bold text-[#c96442] font-serif mb-2">314%</div>
-                   <div className="text-[14px] text-[#5e5d59] uppercase tracking-widest">Avg. Traffic Increase</div>
+                   <h3 className="font-serif text-[22px] font-medium text-[#141413]">Understand technical health</h3>
+                   <p className="mt-3 text-[14px] leading-[1.6] text-[#5e5d59]">Review page-level SEO signals and the evidence behind reported issues.</p>
                  </div>
                  <div>
-                   <div className="text-[48px] font-bold text-[#c96442] font-serif mb-2">24hrs</div>
-                   <div className="text-[14px] text-[#5e5d59] uppercase tracking-widest">To fix critical errors</div>
+                   <h3 className="font-serif text-[22px] font-medium text-[#141413]">Evaluate performance</h3>
+                   <p className="mt-3 text-[14px] leading-[1.6] text-[#5e5d59]">Compare available PageSpeed Insights lab results for mobile and desktop.</p>
                  </div>
                  <div>
-                   <div className="text-[48px] font-bold text-[#c96442] font-serif mb-2">10x</div>
-                   <div className="text-[14px] text-[#5e5d59] uppercase tracking-widest">Faster dev implementation</div>
+                   <h3 className="font-serif text-[22px] font-medium text-[#141413]">Prioritize next steps</h3>
+                   <p className="mt-3 text-[14px] leading-[1.6] text-[#5e5d59]">Use severity and recommendations to plan your website improvements.</p>
                  </div>
               </div>
            </div>
@@ -154,7 +201,9 @@ const Pricing = () => {
         {/* FAQ Section */}
         <Reveal delayMs={300}>
           <div className="mt-32 max-w-3xl mx-auto">
-            <h3 className="text-[32px] font-serif font-medium mb-8 text-center">Frequently Asked Questions</h3>
+            <h2 className="text-[32px] font-serif font-medium mb-8 text-center">
+              Frequently Asked Questions About Website SEO Audits and Core Web Vitals
+            </h2>
             <Accordion type="single" collapsible className="w-full">
               {faqs.map((faq, i) => (
                 <AccordionItem key={i} value={`item-${i}`} className="border-b-[#e8e6dc]">

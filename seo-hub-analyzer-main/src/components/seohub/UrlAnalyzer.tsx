@@ -11,9 +11,10 @@ import { Button } from "@/components/ui/button";
 interface Props {
   id?: string;
   className?: string;
+  submitLabel?: string;
 }
 
-const UrlAnalyzer = ({ id, className = "" }: Props) => {
+const UrlAnalyzer = ({ id, className = "", submitLabel = "Analyze My Website" }: Props) => {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
@@ -169,7 +170,7 @@ const UrlAnalyzer = ({ id, className = "" }: Props) => {
                 <input
                   type="text"
                   inputMode="url"
-                  placeholder="yourdomain.com"
+                  placeholder="Enter your website URL to start your SEO audit..."
                   value={url}
                   onChange={(e) => { setUrl(normalizeDisplayUrl(e.target.value)); setErrorMsg(null); }}
                   onPaste={handlePaste}
@@ -195,7 +196,7 @@ const UrlAnalyzer = ({ id, className = "" }: Props) => {
                 disabled={loading}
                 className="flex h-12 sm:h-10 w-full sm:min-w-[124px] items-center justify-center rounded-[16px] sm:rounded-[15px] bg-[#141413] px-4 text-[15px] sm:text-[14px] font-medium text-[#faf9f5] shadow-[0_0_0_1px_#141413,inset_0_1px_0_rgba(255,255,255,0.06)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#2a2927] active:translate-y-0 disabled:translate-y-0 disabled:opacity-70"
               >
-                {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Starting...</> : "Run scan"}
+                {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Starting...</> : submitLabel}
               </button>
             </div>
           </div>

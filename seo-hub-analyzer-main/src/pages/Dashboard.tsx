@@ -1,23 +1,72 @@
-import { useEffect, useState, useMemo } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
+
+import {
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+
+import { Link, useNavigate } from "react-router-dom";
+
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
+
 import { Button } from "@/components/ui/button";
+
 import {
-  Loader2, Sparkles, TrendingUp, Search, History, ArrowRight,
-  Settings, Zap, BarChart2, Globe, Clock, MoreVertical, FileText, Share, Trash2, Pin, PinOff
+  Activity,
+  ArrowRight,
+  BarChart3,
+  Check,
+  CheckCircle2,
+  Clock3,
+  FileText,
+  Globe,
+  History,
+  Loader2,
+  Lock,
+  MoreHorizontal,
+  Pin,
+  PinOff,
+  Plus,
+  Search,
+  Settings,
+  Share2,
+  ShieldCheck,
+  Sparkles,
+  Trash2,
+  TrendingUp,
+  X,
+  Zap,
 } from "lucide-react";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
+
 import Footer from "@/components/seohub/Footer";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
 import { UpgradeModal } from "@/components/report/UpgradeModal";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,6 +78,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+/* -------------------------------------------------------------------------- */
+/* Types                                                                      */
+/* -------------------------------------------------------------------------- */
+
 interface ScanRecord {
   id: string;
   url: string;
@@ -37,138 +90,980 @@ interface ScanRecord {
   created_at: string;
   completed_at: string | null;
   status: string;
-  reports?: { is_pinned: boolean }[];
+  reports?: {
+    is_pinned: boolean;
+    id?: string;
+    pdf_url?: string | null;
+  }[];
 }
 
-function timeAgo(isoString: string): string {
-  const diff = Date.now() - new Date(isoString).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "Just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
+type TabType =
+  | "all"
+  | "recent"
+  | "pinned"
+  | "in_progress"
+  | "failed";
+
+interface ScanTarget {
+  url: string;
+  domain: string;
+}
+
+const TABS: {
+  id: TabType;
+  label: string;
+}[] = [
+  { id: "all", label: "Completed" },
+  { id: "recent", label: "Recent" },
+  { id: "pinned", label: "Pinned" },
+  { id: "in_progress", label: "In progress" },
+  { id: "failed", label: "Failed" },
+];
+
+const ACTIVE_STATUSES = [
+  "queued",
+  "fetching",
+  "rendering",
+  "analyzing",
+];
+
+const PLAN_CREDITS: Record<string, number> = {
+  free: 5,
+  pro: 50,
+  scale: 100,
+};
+
+/* -------------------------------------------------------------------------- */
+/* Helpers                                                                    */
+/* -------------------------------------------------------------------------- */
+
+function timeAgo(value: string): string {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Date unavailable";
+  }
+
+  const diff = Math.max(0, Date.now() - date.getTime());
+  const minutes = Math.floor(diff / 60000);
+
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes}m ago`;
+
+  const hours = Math.floor(minutes / 60);
+
   if (hours < 24) return `${hours}h ago`;
+
   const days = Math.floor(hours / 24);
+
   if (days < 7) return `${days}d ago`;
-  return new Date(isoString).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
-function ScoreBadge({ score }: { score: number | null }) {
-  if (score === null) return <span className="text-[11px] text-[#595959]">—</span>;
-  const color = score >= 85 ? "bg-[#ECFDF5] text-[#065F46]" : score >= 65 ? "bg-[#FEFCE8] text-[#854D0E]" : "bg-[#FEF2F2] text-[#991B1B]";
+function getDomain(value: string): string {
+  try {
+    return new URL(
+      value.match(/^https?:\/\//i)
+        ? value
+        : `https://${value}`
+    ).hostname;
+  } catch {
+    return value;
+  }
+}
+
+function normalizeScanUrl(value: string): ScanTarget | null {
+  const input = value.trim();
+
+  if (!input) return null;
+
+  try {
+    const candidate = /^https?:\/\//i.test(input)
+      ? input
+      : `https://${input}`;
+
+    const parsed = new URL(candidate);
+
+    if (
+      !["http:", "https:"].includes(parsed.protocol) ||
+      !parsed.hostname ||
+      parsed.username ||
+      parsed.password
+    ) {
+      return null;
+    }
+
+    return {
+      url: parsed.toString(),
+      domain: parsed.hostname.toLowerCase(),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function formatDuration(
+  createdAt: string,
+  completedAt: string | null
+): string | null {
+  if (!completedAt) return null;
+
+  const duration =
+    new Date(completedAt).getTime() -
+    new Date(createdAt).getTime();
+
+  if (!Number.isFinite(duration) || duration < 0) {
+    return null;
+  }
+
+  return `${Math.max(1, Math.floor(duration / 1000))}s`;
+}
+
+function getStatusLabel(status: string): string {
+  const labels: Record<string, string> = {
+    completed: "Completed",
+    failed: "Failed",
+    queued: "Queued",
+    fetching: "Fetching",
+    rendering: "Rendering",
+    analyzing: "Analyzing",
+  };
+
+  return labels[status] ?? status.replace(/_/g, " ");
+}
+
+/* -------------------------------------------------------------------------- */
+/* Score badge                                                                */
+/* -------------------------------------------------------------------------- */
+
+function ScoreBadge({
+  score,
+}: {
+  score: number | null;
+}) {
+  if (score === null) {
+    return (
+      <span className="text-[12px] text-[#929087]">
+        Not available
+      </span>
+    );
+  }
+
+  const color =
+    score >= 85
+      ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+      : score >= 65
+        ? "bg-amber-50 text-amber-800 border-amber-200"
+        : "bg-rose-50 text-rose-800 border-rose-200";
+
   return (
-    <span className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-[12px] font-semibold ${color}`}>
+    <span
+      className={`inline-flex min-w-10 items-center justify-center rounded-md border px-2.5 py-1.5 text-[12px] font-bold tabular-nums ${color}`}
+      aria-label={`SEO score ${score} out of 100`}
+    >
       {score}
     </span>
   );
 }
 
-type TabType = 'all' | 'recent' | 'pinned' | 'in_progress' | 'failed';
+/* -------------------------------------------------------------------------- */
+/* Status badge                                                               */
+/* -------------------------------------------------------------------------- */
+
+function StatusBadge({
+  status,
+}: {
+  status: string;
+}) {
+  const isCompleted = status === "completed";
+  const isFailed = status === "failed";
+
+  const classes = isCompleted
+    ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+    : isFailed
+      ? "border-rose-200 bg-rose-50 text-rose-800"
+      : "border-blue-200 bg-blue-50 text-blue-800";
+
+  return (
+    <span
+      className={`inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${classes}`}
+    >
+      {isCompleted ? (
+        <CheckCircle2 className="h-3 w-3" />
+      ) : isFailed ? (
+        <X className="h-3 w-3" />
+      ) : (
+        <Loader2 className="h-3 w-3 animate-spin" />
+      )}
+
+      {getStatusLabel(status)}
+    </span>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Metric card                                                                */
+/* -------------------------------------------------------------------------- */
+
+function MetricCard({
+  label,
+  value,
+  description,
+  icon: Icon,
+  accent = false,
+}: {
+  label: string;
+  value: string | number;
+  description: string;
+  icon: typeof Activity;
+  accent?: boolean;
+}) {
+  return (
+    <div className="min-w-0 border border-[#e9e6dd] bg-white p-5 transition-colors hover:border-[#d6d2c7] sm:p-6">
+
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-[10px] font-bold uppercase tracking-[0.13em] text-[#858279]">
+          {label}
+        </span>
+
+        <div
+          className={`flex h-9 w-9 shrink-0 items-center justify-center ${
+            accent
+              ? "bg-[#f5ece6] text-[#c96442]"
+              : "bg-[#f3f2ed] text-[#68665e]"
+          }`}
+        >
+          <Icon className="h-4 w-4" />
+        </div>
+      </div>
+
+      <p className="mt-5 text-[31px] font-semibold tracking-[-0.04em] text-[#171715] tabular-nums sm:text-[35px]">
+        {value}
+      </p>
+
+      <p className="mt-1.5 text-[11px] leading-[1.6] text-[#89867d]">
+        {description}
+      </p>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Report actions                                                             */
+/* -------------------------------------------------------------------------- */
+
+function ReportActions({
+  item,
+  isPinned,
+  onView,
+  onTogglePin,
+  onShare,
+  onRescan,
+  onDelete,
+}: {
+  item: ScanRecord;
+  isPinned: boolean;
+  onView: () => void;
+  onTogglePin: () => void;
+  onShare: () => void;
+  onRescan: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label={`Actions for ${getDomain(item.url)}`}
+          className="h-9 w-9 shrink-0 rounded-md text-[#77746c] hover:bg-[#f2f0e9] hover:text-[#171715]"
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent
+        align="end"
+        className="w-48 border-[#e8e6dc] bg-white p-1.5 shadow-xl"
+      >
+        <DropdownMenuItem
+          onClick={onView}
+          className="cursor-pointer text-[12px]"
+        >
+          <FileText className="mr-2 h-4 w-4 text-[#77746c]" />
+          View report
+        </DropdownMenuItem>
+
+        <DropdownMenuItem
+          disabled={item.status !== "completed"}
+          onClick={onTogglePin}
+          className="cursor-pointer text-[12px]"
+        >
+          {isPinned ? (
+            <PinOff className="mr-2 h-4 w-4 text-[#77746c]" />
+          ) : (
+            <Pin className="mr-2 h-4 w-4 text-[#77746c]" />
+          )}
+
+          {isPinned ? "Unpin report" : "Pin report"}
+        </DropdownMenuItem>
+
+        <DropdownMenuItem
+          disabled={item.status !== "completed"}
+          onClick={onShare}
+          className="cursor-pointer text-[12px]"
+        >
+          <Share2 className="mr-2 h-4 w-4 text-[#77746c]" />
+          Share report
+        </DropdownMenuItem>
+
+        <DropdownMenuItem
+          onClick={onRescan}
+          disabled={item.status !== "completed"}
+          className="cursor-pointer text-[12px]"
+        >
+          <Zap className="mr-2 h-4 w-4 text-[#77746c]" />
+          Run again
+        </DropdownMenuItem>
+
+        <DropdownMenuSeparator className="bg-[#eeeae1]" />
+
+        <DropdownMenuItem
+          onClick={onDelete}
+          className="cursor-pointer text-[12px] text-[#c96442] focus:bg-[#fff2ed] focus:text-[#c96442]"
+        >
+          <Trash2 className="mr-2 h-4 w-4" />
+          Delete report
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Main Dashboard                                                             */
+/* -------------------------------------------------------------------------- */
 
 const Dashboard = () => {
   const { user, profile, isLoading, upgradeTier } = useAuth();
+
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  /* ---------------------------------------------------------------------- */
+  /* State                                                                  */
+  /* ---------------------------------------------------------------------- */
+
   const [scanUrl, setScanUrl] = useState("");
-  const [activeTab, setActiveTab] = useState<TabType>('all');
+  const [scanError, setScanError] = useState("");
+
+  const [activeTab, setActiveTab] = useState<TabType>("all");
   const [searchQuery, setSearchQuery] = useState("");
+
   const [selectedJobs, setSelectedJobs] = useState<string[]>([]);
+
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [jobToDelete, setJobToDelete] = useState<string | null>(null);
-  
-  // Existing Report Modal State
+
   const [existingScanId, setExistingScanId] = useState<string | null>(null);
   const [existingScanDate, setExistingScanDate] = useState<string | null>(null);
-  const [showExistingModal, setShowExistingModal] = useState(false);
   const [normalizedUrlForScan, setNormalizedUrlForScan] = useState("");
+  const [showExistingModal, setShowExistingModal] = useState(false);
+
   const [isScanning, setIsScanning] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
 
+  const [copiedReportId, setCopiedReportId] = useState<string | null>(null);
+
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /* ---------------------------------------------------------------------- */
+  /* Authentication                                                         */
+  /* ---------------------------------------------------------------------- */
+
   useEffect(() => {
-    if (!isLoading && !user) navigate("/");
+    if (!isLoading && !user) {
+      navigate("/", { replace: true });
+    }
   }, [user, isLoading, navigate]);
 
-  const { data: scanHistory = [], isLoading: historyLoading } = useQuery({
-    queryKey: ['scanHistory', user?.id],
+  /* ---------------------------------------------------------------------- */
+  /* Cleanup                                                                */
+  /* ---------------------------------------------------------------------- */
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) {
+        clearTimeout(copyTimerRef.current);
+      }
+    };
+  }, []);
+
+  /* ---------------------------------------------------------------------- */
+  /* Fetch history                                                          */
+  /* ---------------------------------------------------------------------- */
+
+  const {
+    data: scanHistory = [],
+    isLoading: historyLoading,
+    isError: historyError,
+    refetch: refetchHistory,
+  } = useQuery<ScanRecord[]>({
+    queryKey: ["scanHistory", user?.id],
+
     queryFn: async () => {
       if (!user) return [];
-      const { data } = await supabase
+
+      const { data, error } = await supabase
         .from("scan_jobs")
-        .select("id, url, domain, score, created_at, completed_at, status, reports(is_pinned)")
+        .select(
+          "id, url, domain, score, created_at, completed_at, status, reports(is_pinned)"
+        )
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(100);
+
+      if (error) throw error;
+
       return (data ?? []) as ScanRecord[];
     },
+
     enabled: !!user,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 5,
+    retry: 1,
   });
 
-  // Real-time subscription to update the cache instantly
+  /* ---------------------------------------------------------------------- */
+  /* Realtime updates                                                       */
+  /* ---------------------------------------------------------------------- */
+
   useEffect(() => {
     if (!user) return;
-    const channel = supabase.channel(`dashboard_scans_${user.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'scan_jobs', filter: `user_id=eq.${user.id}` }, () => {
-        queryClient.invalidateQueries({ queryKey: ['scanHistory', user.id] });
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'reports', filter: `user_id=eq.${user.id}` }, () => {
-        // Only invalidate when THIS user's reports change (e.g. pin/unpin or pdf)
-        queryClient.invalidateQueries({ queryKey: ['scanHistory', user.id] });
-      })
+
+    const channel = supabase
+      .channel(`dashboard_scans_${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "scan_jobs",
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          void queryClient.invalidateQueries({
+            queryKey: ["scanHistory", user.id],
+          });
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "reports",
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          void queryClient.invalidateQueries({
+            queryKey: ["scanHistory", user.id],
+          });
+        }
+      )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(channel);
     };
   }, [user, queryClient]);
 
+  /* ---------------------------------------------------------------------- */
+  /* Filter history                                                         */
+  /* ---------------------------------------------------------------------- */
+
   const filteredHistory = useMemo(() => {
-    let filtered = scanHistory;
+    let result = [...scanHistory];
 
-    // Apply Tabs
-    if (activeTab === 'recent') {
-      const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-      filtered = filtered.filter(item => new Date(item.created_at).getTime() > oneWeekAgo && item.status === 'completed');
-    } else if (activeTab === 'pinned') {
-      filtered = filtered.filter(item => item.reports?.[0]?.is_pinned);
-    } else if (activeTab === 'in_progress') {
-      filtered = filtered.filter(item => item.status === 'queued' || item.status === 'fetching' || item.status === 'rendering' || item.status === 'analyzing');
-    } else if (activeTab === 'failed') {
-      filtered = filtered.filter(item => item.status === 'failed');
+    if (activeTab === "recent") {
+      const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+
+      result = result.filter(
+        (item) =>
+          item.status === "completed" &&
+          new Date(item.created_at).getTime() > weekAgo
+      );
+    } else if (activeTab === "pinned") {
+      result = result.filter(
+        (item) => item.reports?.[0]?.is_pinned
+      );
+    } else if (activeTab === "in_progress") {
+      result = result.filter((item) =>
+        ACTIVE_STATUSES.includes(item.status)
+      );
+    } else if (activeTab === "failed") {
+      result = result.filter(
+        (item) => item.status === "failed"
+      );
     } else {
-      // all
-      filtered = filtered.filter(item => item.status === 'completed');
-    }
-
-    // Apply Search
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      filtered = filtered.filter(item => 
-        (item.domain && item.domain.toLowerCase().includes(q)) || 
-        item.url.toLowerCase().includes(q)
+      result = result.filter(
+        (item) => item.status === "completed"
       );
     }
 
-    return filtered;
+    const query = searchQuery.trim().toLowerCase();
+
+    if (query) {
+      result = result.filter(
+        (item) =>
+          item.domain?.toLowerCase().includes(query) ||
+          item.url.toLowerCase().includes(query)
+      );
+    }
+
+    return result;
   }, [scanHistory, activeTab, searchQuery]);
 
-  if (isLoading) {
+  /* ---------------------------------------------------------------------- */
+  /* Metrics and usage                                                      */
+  /* ---------------------------------------------------------------------- */
+
+  const plan = profile?.tier?.toLowerCase() ?? "free";
+
+  const maxCredits = PLAN_CREDITS[plan] ?? PLAN_CREDITS.free;
+
+  const remainingCredits = Math.max(
+    0,
+    Number(profile?.credits_remaining ?? 0)
+  );
+
+  const creditsUsed = Math.min(
+    maxCredits,
+    Math.max(0, maxCredits - remainingCredits)
+  );
+
+  const usagePercentage = Math.min(
+    100,
+    Math.max(0, (creditsUsed / maxCredits) * 100)
+  );
+
+  const completedScans = useMemo(
+    () => scanHistory.filter((item) => item.status === "completed"),
+    [scanHistory]
+  );
+
+  const averageScore = useMemo(() => {
+    const scored = completedScans.filter(
+      (item) => item.score !== null && item.score !== undefined
+    );
+
+    return scored.length
+      ? Math.round(
+          scored.reduce(
+            (total, item) => total + Number(item.score),
+            0
+          ) / scored.length
+        )
+      : null;
+  }, [completedScans]);
+
+  const inProgressCount = scanHistory.filter((item) =>
+    ACTIVE_STATUSES.includes(item.status)
+  ).length;
+
+  const failedCount = scanHistory.filter(
+    (item) => item.status === "failed"
+  ).length;
+
+  const pinnedCount = scanHistory.filter(
+    (item) => item.reports?.[0]?.is_pinned
+  ).length;
+
+  const currentTab = TABS.find(
+    (tab) => tab.id === activeTab
+  );
+
+  /* ---------------------------------------------------------------------- */
+  /* Scan initiation                                                         */
+  /* ---------------------------------------------------------------------- */
+
+  const initiateNewScan = async (
+    target: ScanTarget
+  ) => {
+    if (isScanning) return;
+
+    setIsScanning(true);
+    setScanError("");
+
+    try {
+      const { data, error } = await supabase.rpc(
+        "start_scan_job",
+        {
+          p_url: target.url,
+          p_domain: target.domain,
+        }
+      );
+
+      if (error) throw error;
+
+      if (!data?.success) {
+        if (data?.error === "Insufficient credits") {
+          setShowUpgrade(true);
+        } else {
+          setScanError(
+            data?.error || "Unable to start the scan. Please try again."
+          );
+        }
+
+        setIsScanning(false);
+        return;
+      }
+
+      if (!data.job_id) {
+        throw new Error("The scan service did not return a job ID.");
+      }
+
+      void queryClient.invalidateQueries({
+        queryKey: ["scanHistory", user?.id],
+      });
+
+      navigate(
+        `/report?jobId=${encodeURIComponent(data.job_id)}&init=true`
+      );
+    } catch (error) {
+      console.error("Failed to start scan:", error);
+
+      setScanError(
+        error instanceof Error
+          ? error.message
+          : "Unable to start the scan. Please try again."
+      );
+
+      setIsScanning(false);
+    }
+  };
+
+  /* ---------------------------------------------------------------------- */
+  /* Quick scan                                                              */
+  /* ---------------------------------------------------------------------- */
+
+  const handleQuickScan = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (isScanning) return;
+
+    const target = normalizeScanUrl(scanUrl);
+
+    if (!target) {
+      setScanError("Enter a valid website URL or domain.");
+      return;
+    }
+
+    if (remainingCredits <= 0) {
+      setShowUpgrade(true);
+      return;
+    }
+
+    setScanError("");
+    setIsScanning(true);
+
+    try {
+      const twentyFourHoursAgo = new Date(
+        Date.now() - 24 * 60 * 60 * 1000
+      ).toISOString();
+
+      const { data: recentScans, error: recentError } =
+        await supabase
+          .from("scan_jobs")
+          .select("id, created_at")
+          .eq("user_id", user?.id)
+          .eq("domain", target.domain)
+          .eq("status", "completed")
+          .gte("created_at", twentyFourHoursAgo)
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+      if (recentError) {
+        console.warn(
+          "Could not check recent scans:",
+          recentError.message
+        );
+      }
+
+      if (!recentError && recentScans?.length) {
+        setExistingScanId(recentScans[0].id);
+        setExistingScanDate(recentScans[0].created_at);
+        setNormalizedUrlForScan(target.url);
+        setShowExistingModal(true);
+        setIsScanning(false);
+        return;
+      }
+
+      await initiateNewScan(target);
+    } catch (error) {
+      console.error("Existing scan check failed:", error);
+
+      await initiateNewScan(target);
+    }
+  };
+
+  /* ---------------------------------------------------------------------- */
+  /* Delete reports                                                          */
+  /* ---------------------------------------------------------------------- */
+
+  const executeDelete = async (jobIds: string[]) => {
+    if (!user || jobIds.length === 0) return;
+
+    try {
+      for (const jobId of jobIds) {
+        const {
+          data: report,
+          error: reportError,
+        } = await supabase
+          .from("reports")
+          .select("id, pdf_url")
+          .eq("job_id", jobId)
+          .maybeSingle();
+
+        if (reportError) throw reportError;
+
+        if (report) {
+          if (report.pdf_url) {
+            try {
+              const pdfUrl = new URL(report.pdf_url);
+              const marker = "/report_exports/";
+
+              const markerIndex =
+                pdfUrl.pathname.indexOf(marker);
+
+              const storagePath =
+                markerIndex >= 0
+                  ? decodeURIComponent(
+                      pdfUrl.pathname.slice(
+                        markerIndex + marker.length
+                      )
+                    )
+                  : decodeURIComponent(
+                      pdfUrl.pathname.split("/").pop() ?? ""
+                    );
+
+              if (storagePath) {
+                const { error: storageError } =
+                  await supabase.storage
+                    .from("report_exports")
+                    .remove([storagePath]);
+
+                if (storageError) {
+                  console.warn(
+                    "PDF cleanup failed:",
+                    storageError.message
+                  );
+                }
+              }
+            } catch (error) {
+              console.warn("Could not clean up PDF:", error);
+            }
+          }
+
+          const { error: dataError } = await supabase
+            .from("report_data")
+            .delete()
+            .eq("report_id", report.id);
+
+          if (dataError) throw dataError;
+
+          const { error: deleteReportError } = await supabase
+            .from("reports")
+            .delete()
+            .eq("id", report.id);
+
+          if (deleteReportError) throw deleteReportError;
+        }
+
+        const { error: deleteJobError } = await supabase
+          .from("scan_jobs")
+          .delete()
+          .eq("id", jobId)
+          .eq("user_id", user.id);
+
+        if (deleteJobError) throw deleteJobError;
+      }
+
+      queryClient.setQueryData(
+        ["scanHistory", user.id],
+        (old: ScanRecord[] | undefined) =>
+          old?.filter((item) => !jobIds.includes(item.id)) ?? []
+      );
+
+      setSelectedJobs((previous) =>
+        previous.filter((id) => !jobIds.includes(id))
+      );
+    } catch (error) {
+      console.error("Failed to delete reports:", error);
+
+      void queryClient.invalidateQueries({
+        queryKey: ["scanHistory", user.id],
+      });
+    }
+  };
+
+  const confirmDelete = async () => {
+    const ids = jobToDelete
+      ? [jobToDelete]
+      : [...selectedJobs];
+
+    await executeDelete(ids);
+
+    setDeleteDialogOpen(false);
+    setJobToDelete(null);
+  };
+
+  /* ---------------------------------------------------------------------- */
+  /* Pin / unpin                                                             */
+  /* ---------------------------------------------------------------------- */
+
+  const handleTogglePin = async (
+    jobId: string,
+    currentPinned: boolean
+  ) => {
+    if (!user) return;
+
+    try {
+      const { data: report, error: findError } =
+        await supabase
+          .from("reports")
+          .select("id")
+          .eq("job_id", jobId)
+          .maybeSingle();
+
+      if (findError) throw findError;
+      if (!report) return;
+
+      const { error: updateError } = await supabase
+        .from("reports")
+        .update({
+          is_pinned: !currentPinned,
+        })
+        .eq("id", report.id);
+
+      if (updateError) throw updateError;
+
+      queryClient.setQueryData(
+        ["scanHistory", user.id],
+        (old: ScanRecord[] | undefined) =>
+          old?.map((item) =>
+            item.id === jobId
+              ? {
+                  ...item,
+                  reports: [
+                    {
+                      ...(item.reports?.[0] ?? {}),
+                      is_pinned: !currentPinned,
+                    },
+                  ],
+                }
+              : item
+          ) ?? []
+      );
+    } catch (error) {
+      console.error("Failed to update pin:", error);
+
+      void queryClient.invalidateQueries({
+        queryKey: ["scanHistory", user.id],
+      });
+    }
+  };
+
+  /* ---------------------------------------------------------------------- */
+  /* Share report                                                            */
+  /* ---------------------------------------------------------------------- */
+
+  const handleShare = async (jobId: string) => {
+    try {
+      const url = `${window.location.origin}/report?jobId=${encodeURIComponent(jobId)}`;
+
+      await navigator.clipboard.writeText(url);
+
+      setCopiedReportId(jobId);
+
+      if (copyTimerRef.current) {
+        clearTimeout(copyTimerRef.current);
+      }
+
+      copyTimerRef.current = setTimeout(() => {
+        setCopiedReportId(null);
+      }, 2000);
+    } catch (error) {
+      console.error("Could not copy report link:", error);
+    }
+  };
+
+  /* ---------------------------------------------------------------------- */
+  /* Select reports                                                          */
+  /* ---------------------------------------------------------------------- */
+
+  const allVisibleSelected =
+    filteredHistory.length > 0 &&
+    filteredHistory.every((item) =>
+      selectedJobs.includes(item.id)
+    );
+
+  const toggleSelectAll = (checked: boolean) => {
+    const visibleIds = filteredHistory.map((item) => item.id);
+
+    setSelectedJobs((previous) => {
+      if (checked) {
+        return [...new Set([...previous, ...visibleIds])];
+      }
+
+      return previous.filter(
+        (id) => !visibleIds.includes(id)
+      );
+    });
+  };
+
+  const toggleSelect = (
+    jobId: string,
+    checked: boolean
+  ) => {
+    setSelectedJobs((previous) =>
+      checked
+        ? [...new Set([...previous, jobId])]
+        : previous.filter((id) => id !== jobId)
+    );
+  };
+
+  /* ---------------------------------------------------------------------- */
+  /* Loading state                                                           */
+  /* ---------------------------------------------------------------------- */
+
+  if (isLoading || (!profile && user)) {
     return (
-      <div className="min-h-screen bg-[#FDFBF7] text-[#141413] font-sans pt-24 pb-20">
-        <div className="container-page">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-12 animate-pulse">
-            <div className="w-full">
-              <div className="h-10 bg-black/[0.04] rounded-lg w-64 mb-4" />
-              <div className="h-4 bg-black/[0.04] rounded w-96" />
-            </div>
-            <div className="h-12 bg-black/[0.04] rounded-full w-full md:w-[400px]" />
+      <div className="min-h-screen bg-[#FDFBF7] px-5 pb-20 pt-28 sm:px-8">
+        <div className="mx-auto max-w-[1320px] animate-pulse space-y-8">
+
+          <div>
+            <div className="h-9 w-64 rounded-lg bg-black/[0.05]" />
+            <div className="mt-3 h-4 w-96 max-w-full rounded bg-black/[0.05]" />
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            <div className="lg:col-span-3 h-[400px] bg-white border border-black/5 rounded-[24px]" />
-            <div className="space-y-6">
-              <div className="h-48 bg-white border border-black/5 rounded-[24px]" />
-              <div className="h-48 bg-[#FDFBF7] border border-black/5 rounded-[24px]" />
-            </div>
+
+          <div className="h-48 rounded-xl bg-white" />
+
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            {[1, 2, 3, 4].map((item) => (
+              <div
+                key={item}
+                className="h-32 rounded-lg border border-black/[0.05] bg-white"
+              />
+            ))}
           </div>
+
+          <div className="h-96 rounded-xl border border-black/[0.05] bg-white" />
         </div>
       </div>
     );
@@ -176,530 +1071,1054 @@ const Dashboard = () => {
 
   if (!profile) return null;
 
-  const maxCredits = profile.tier === "scale" ? 100 : profile.tier === "pro" ? 50 : 5;
-  const creditsUsed = maxCredits - profile.credits_remaining;
-  const usagePercentage = Math.min(100, (creditsUsed / maxCredits) * 100);
+  /* ---------------------------------------------------------------------- */
+  /* Render report row / card                                                */
+  /* ---------------------------------------------------------------------- */
 
-  const initiateNewScan = async (normalized: string) => {
-    setIsScanning(true);
-    try {
-      const fullUrl = `https://${normalized}`;
-      const { data, error } = await supabase.rpc('start_scan_job', { 
-        p_url: fullUrl, 
-        p_domain: normalized 
-      });
+  const renderReportActions = (item: ScanRecord) => {
+    const pinned = item.reports?.[0]?.is_pinned ?? false;
 
-      if (error) throw error;
-      if (!data.success) {
-        console.error("Scan error:", data.error);
-        if (data.error === 'Insufficient credits') {
-          setShowUpgrade(true);
+    return (
+      <ReportActions
+        item={item}
+        isPinned={pinned}
+        onView={() =>
+          navigate(`/report?jobId=${encodeURIComponent(item.id)}`)
         }
-        setIsScanning(false);
-        return;
-      }
+        onTogglePin={() =>
+          void handleTogglePin(item.id, pinned)
+        }
+        onShare={() => void handleShare(item.id)}
+        onRescan={() => {
+          const target = normalizeScanUrl(item.url);
 
-      navigate(`/report?jobId=${data.job_id}&init=true`);
-    } catch (err) {
-      console.error("Failed to start scan:", err);
-      setIsScanning(false);
-    }
-  };
-
-  const handleQuickScan = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isScanning) return;
-    if (!scanUrl.trim()) return;
-    const normalized = scanUrl.trim().replace(/^https?:\/\//i, "").replace(/\/$/, "").replace(/\s+/g, "");
-    if (!normalized) return;
-
-    if (profile && profile.credits_remaining <= 0) {
-      setShowUpgrade(true);
-      return;
-    }
-
-    setIsScanning(true);
-    try {
-      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      const { data: recentScans, error: recentErr } = await supabase
-        .from('scan_jobs')
-        .select('id, created_at')
-        .eq('domain', normalized)
-        .eq('status', 'completed')
-        .gte('created_at', twentyFourHoursAgo)
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      if (!recentErr && recentScans && recentScans.length > 0) {
-        setExistingScanId(recentScans[0].id);
-        setExistingScanDate(recentScans[0].created_at);
-        setNormalizedUrlForScan(normalized);
-        setShowExistingModal(true);
-        setIsScanning(false);
-        return;
-      }
-    } catch (err) {
-      console.error("Check existing scans failed", err);
-    }
-
-    await initiateNewScan(normalized);
-  };
-
-  const executeDelete = async (jobIds: string[]) => {
-    try {
-      for (const jobId of jobIds) {
-        const { data: rep } = await supabase.from('reports').select('id, pdf_url').eq('job_id', jobId).single();
-        if (rep) {
-          if (rep.pdf_url) {
-            const urlParts = rep.pdf_url.split('/');
-            const filename = urlParts[urlParts.length - 1];
-            await supabase.storage.from('report_exports').remove([filename]);
+          if (target) {
+            void initiateNewScan(target);
           }
-          await supabase.from('report_data').delete().eq('report_id', rep.id);
-          await supabase.from('reports').delete().eq('id', rep.id);
-        }
-        await supabase.from('scan_jobs').delete().eq('id', jobId);
-      }
-      queryClient.setQueryData(['scanHistory', user?.id], (old: ScanRecord[] | undefined) => {
-        if (!old) return [];
-        return old.filter(item => !jobIds.includes(item.id));
-      });
-      setSelectedJobs(prev => prev.filter(id => !jobIds.includes(id)));
-    } catch (err) {
-      console.error("Failed to delete report(s):", err);
-    }
-  };
-
-  const confirmDelete = async () => {
-    if (jobToDelete) {
-      await executeDelete([jobToDelete]);
-    } else if (selectedJobs.length > 0) {
-      await executeDelete(selectedJobs);
-    }
-    setDeleteDialogOpen(false);
-    setJobToDelete(null);
-  };
-
-  const handleTogglePin = async (jobId: string, currentPinned: boolean) => {
-    try {
-      const { data: rep } = await supabase.from('reports').select('id').eq('job_id', jobId).single();
-      if (rep) {
-        await supabase.from('reports').update({ is_pinned: !currentPinned }).eq('id', rep.id);
-        // Optimistic update
-        queryClient.setQueryData(['scanHistory', user?.id], (old: ScanRecord[] | undefined) => {
-          if (!old) return [];
-          return old.map(item => {
-            if (item.id === jobId) {
-              return { ...item, reports: [{ is_pinned: !currentPinned }] };
-            }
-            return item;
-          });
-        });
-      }
-    } catch (err) {
-      console.error("Failed to toggle pin:", err);
-    }
+        }}
+        onDelete={() => {
+          setJobToDelete(item.id);
+          setDeleteDialogOpen(true);
+        }}
+      />
+    );
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFBF7] text-[#141413] font-sans pt-24">
-      <main className="container-page pb-20">
+    <div className="min-h-screen bg-[#FDFBF7] font-sans text-[#171715]">
 
-        {/* Premium Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-12">
-          <div>
-            <h1 className="text-[36px] font-serif font-semibold leading-tight text-[#141413]">
-              Your Workspace
+      <main className="mx-auto max-w-[1440px] px-4 pb-16 pt-28 sm:px-6 sm:pb-20 sm:pt-32 lg:px-10">
+
+        {/* ============================================================ */}
+        {/* HEADER                                                       */}
+        {/* ============================================================ */}
+
+        <section className="mb-9 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+
+          <div className="min-w-0">
+            <div className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#a09c91]">
+              <span>Workspace</span>
+              <span className="text-[#c96442]">/</span>
+              <span className="text-[#6c6961]">Overview</span>
+            </div>
+
+            <h1 className="font-serif text-[34px] font-medium leading-tight tracking-[-0.035em] text-[#171715] sm:text-[43px]">
+              Your workspace
             </h1>
-            <p className="text-[15px] text-[#595959] mt-2 max-w-xl">
-              Access your SEO intelligence reports, monitor ongoing scans, and manage your analysis history.
+
+            <p className="mt-3 max-w-[570px] text-[13px] leading-[1.8] text-[#77746c] sm:text-[14px]">
+              Your website audits, reports, and account usage,
+              all in one place.
             </p>
           </div>
-          <form onSubmit={handleQuickScan} className="w-full md:w-auto">
-            <div className="relative flex items-center w-full md:w-[400px]">
-              <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#595959]" />
-              <input
-                type="text"
-                value={scanUrl}
-                disabled={isScanning}
-                onChange={e => setScanUrl(e.target.value)}
-                placeholder="Scan a website..."
-                className="w-full h-12 pl-10 pr-[120px] rounded-full border border-black/5 bg-white text-[14px] text-[#141413] placeholder:text-[#595959] focus:outline-none focus:border-[#141413] focus:ring-1 focus:ring-[#141413] transition-all shadow-[0_1px_3px_rgba(0,0,0,0.04)] disabled:opacity-70 disabled:cursor-not-allowed"
-              />
-              <div className="absolute right-1.5 flex items-center gap-1.5">
-                <span className="hidden sm:flex items-center justify-center px-1.5 h-5 bg-[#FDFBF7] border border-black/5 rounded text-[10px] font-medium text-[#595959]">
-                  ⌘K
-                </span>
-                <Button type="submit" disabled={isScanning} className="rounded-full h-9 bg-[#141413] text-[#faf9f5] hover:bg-[#30302e] px-4 shadow-sm text-[13px] disabled:opacity-70 disabled:cursor-not-allowed">
-                  {isScanning ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Zap className="w-3.5 h-3.5 mr-1.5" />} 
-                  {isScanning ? "Scanning" : "Scan"}
-                </Button>
+
+          <div className="flex items-center gap-3 border border-[#e8e5dc] bg-white px-4 py-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f1eee7] text-[13px] font-bold text-[#555148]">
+              {profile.name?.charAt(0).toUpperCase() || "U"}
+            </div>
+
+            <div className="min-w-0">
+              <p className="truncate text-[12px] font-semibold text-[#272620]">
+                {profile.name || "Your account"}
+              </p>
+
+              <p className="mt-0.5 text-[10px] capitalize text-[#88857c]">
+                {profile.tier ?? "Free"} plan
+              </p>
+            </div>
+          </div>
+
+        </section>
+
+        {/* ============================================================ */}
+        {/* QUICK SCAN                                                   */}
+        {/* ============================================================ */}
+
+        <section className="relative mb-8 overflow-hidden bg-[#171715] text-white">
+
+          <div className="pointer-events-none absolute -right-10 -top-28 h-72 w-72 rounded-full border border-white/[0.07]" />
+
+          <div className="pointer-events-none absolute -right-3 -top-20 h-52 w-52 rounded-full border border-[#c96442]/25" />
+
+          <div className="relative grid gap-8 p-6 sm:p-8 lg:grid-cols-[1fr_1.05fr] lg:items-center lg:p-10">
+
+            <div>
+              <div className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.17em] text-[#d18a64]">
+                <Zap className="h-3.5 w-3.5" />
+                Website analysis
+              </div>
+
+              <h2 className="mt-4 font-serif text-[29px] font-medium leading-[1.2] sm:text-[36px]">
+                Ready to analyze a website?
+              </h2>
+
+              <p className="mt-3 max-w-[410px] text-[12px] leading-[1.8] text-[#aaa79e] sm:text-[13px]">
+                Enter a website URL to start a new SEO analysis
+                and uncover potential optimization opportunities.
+              </p>
+
+              <div className="mt-6 flex items-center gap-2 text-[11px] text-[#99958a]">
+                <ShieldCheck className="h-4 w-4 text-[#d18a64]" />
+
+                {remainingCredits} scan credits available
               </div>
             </div>
-          </form>
-        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 mb-10">
+            <form
+              onSubmit={handleQuickScan}
+              className="min-w-0"
+            >
+              <label
+                htmlFor="scan-url"
+                className="mb-2 block text-[11px] font-semibold text-[#ddd9cf]"
+              >
+                Website URL
+              </label>
 
-          {/* Left/Main: history + tabs */}
-          <div className="lg:col-span-3 space-y-6">
+              <div className="flex flex-col gap-2 sm:flex-row">
 
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-              <div className="flex bg-black/[0.04] p-1 rounded-full overflow-x-auto w-full sm:w-auto no-scrollbar">
-                {[
-                  { id: 'all', label: 'All Reports' },
-                  { id: 'recent', label: 'Recent' },
-                  { id: 'pinned', label: 'Pinned' },
-                  { id: 'in_progress', label: 'In Progress' },
-                  { id: 'failed', label: 'Failed' },
-                ].map(tab => (
+                <div className="relative min-w-0 flex-1">
+                  <Globe className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#878279]" />
+
+                  <input
+                    id="scan-url"
+                    type="text"
+                    value={scanUrl}
+                    disabled={isScanning}
+                    onChange={(event) => {
+                      setScanUrl(event.target.value);
+                      setScanError("");
+                    }}
+                    placeholder="https://example.com"
+                    autoComplete="url"
+                    inputMode="url"
+                    className="h-12 w-full rounded-md border border-white/10 bg-white/[0.07] pl-11 pr-4 text-[13px] text-white outline-none transition-colors placeholder:text-[#858178] focus:border-[#d18a64] focus:bg-white/[0.1] disabled:opacity-60"
+                  />
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={isScanning || !scanUrl.trim()}
+                  className="h-12 shrink-0 rounded-md bg-[#c96442] px-6 text-[12px] font-semibold text-white shadow-none transition-colors hover:bg-[#b05437] disabled:opacity-60"
+                >
+                  {isScanning ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Zap className="mr-2 h-4 w-4" />
+                  )}
+
+                  {isScanning ? "Starting..." : "Start scan"}
+
+                  {!isScanning && (
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+
+              {scanError && (
+                <p
+                  role="alert"
+                  className="mt-3 text-[11px] text-[#ffb9a2]"
+                >
+                  {scanError}
+                </p>
+              )}
+
+              <p className="mt-3 text-[10px] leading-relaxed text-[#878279]">
+                Example: example.com or https://example.com
+              </p>
+            </form>
+
+          </div>
+        </section>
+
+        {/* ============================================================ */}
+        {/* OVERVIEW METRICS                                             */}
+        {/* ============================================================ */}
+
+        <section className="mb-10">
+
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h2 className="text-[12px] font-bold uppercase tracking-[0.14em] text-[#67645c]">
+              Account overview
+            </h2>
+
+            <span className="text-[10px] text-[#99958a]">
+              Based on available scan history
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+
+            <MetricCard
+              label="Total scans"
+              value={scanHistory.length}
+              description="All recorded scan jobs"
+              icon={Globe}
+            />
+
+            <MetricCard
+              label="Completed"
+              value={completedScans.length}
+              description="Successfully completed reports"
+              icon={CheckCircle2}
+            />
+
+            <MetricCard
+              label="Average score"
+              value={averageScore === null ? "—" : averageScore}
+              description="Average of scored completed reports"
+              icon={TrendingUp}
+              accent
+            />
+
+            <MetricCard
+              label="In progress"
+              value={inProgressCount}
+              description="Scans currently processing"
+              icon={Activity}
+            />
+
+          </div>
+        </section>
+
+        {/* ============================================================ */}
+        {/* MAIN CONTENT                                                 */}
+        {/* ============================================================ */}
+
+        <div className="grid min-w-0 grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_310px] xl:gap-8">
+
+          {/* ======================================================== */}
+          {/* REPORT HISTORY                                           */}
+          {/* ======================================================== */}
+
+          <section className="min-w-0 border border-[#e8e5dc] bg-white">
+
+            {/* Section header */}
+            <div className="flex flex-col gap-4 border-b border-[#eeeae2] p-5 sm:p-6">
+
+              <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+
+                <div>
+                  <div className="flex items-center gap-2">
+                    <History className="h-4 w-4 text-[#c96442]" />
+
+                    <h2 className="text-[15px] font-semibold text-[#24231f]">
+                      Your reports
+                    </h2>
+                  </div>
+
+                  <p className="mt-1 text-[11px] text-[#89867d]">
+                    View and manage your website analysis history.
+                  </p>
+                </div>
+
+                <span className="text-[10px] font-medium text-[#858279]">
+                  {filteredHistory.length} results
+                </span>
+
+              </div>
+
+              {/* Tabs */}
+              <div
+                role="tablist"
+                aria-label="Filter reports"
+                className="-mx-1 flex gap-1 overflow-x-auto pb-1"
+              >
+                {TABS.map((tab) => (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id as TabType)}
-                    className={`px-4 py-1.5 rounded-full text-[13px] font-medium transition-all whitespace-nowrap ${
-                      activeTab === tab.id ? 'bg-white text-[#141413] shadow-[0_1px_2px_rgba(0,0,0,0.06)]' : 'text-[#595959] hover:text-[#141413]'
+                    type="button"
+                    role="tab"
+                    aria-selected={activeTab === tab.id}
+                    onClick={() => {
+                      setActiveTab(tab.id);
+                      setSelectedJobs([]);
+                    }}
+                    className={`min-h-9 shrink-0 rounded-md px-3 text-[11px] font-semibold transition-colors ${
+                      activeTab === tab.id
+                        ? "bg-[#171715] text-white"
+                        : "text-[#77746c] hover:bg-[#f3f1eb] hover:text-[#171715]"
                     }`}
                   >
                     {tab.label}
                   </button>
                 ))}
               </div>
-              
-              <div className="relative w-full sm:w-56">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#595959]" />
+
+              {/* Search */}
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#969287]" />
+
                 <input
-                  type="text"
-                  placeholder="Filter reports..."
+                  type="search"
                   value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className="w-full h-9 pl-9 pr-4 rounded-full border border-black/5 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.02)] text-[13px] text-[#141413] placeholder:text-[#595959] focus:outline-none focus:border-[#141413] transition-colors"
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Search by domain or website URL"
+                  aria-label="Search reports"
+                  className="h-11 w-full rounded-md border border-[#e7e4da] bg-[#fcfbf8] pl-10 pr-10 text-[12px] text-[#24231f] outline-none transition-colors placeholder:text-[#a09c92] focus:border-[#c96442]"
                 />
+
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery("")}
+                    aria-label="Clear report search"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#969287] hover:text-[#171715]"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
               </div>
+
             </div>
 
+            {/* Bulk selection */}
             {selectedJobs.length > 0 && (
-              <div className="bg-[#141413] text-[#faf9f5] rounded-[16px] px-4 py-3 flex items-center justify-between mb-0 shadow-sm animate-in fade-in slide-in-from-bottom-2">
-                <span className="text-[13px] font-medium">{selectedJobs.length} report{selectedJobs.length > 1 ? 's' : ''} selected</span>
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => setSelectedJobs([])} className="text-[#87867f] hover:text-white hover:bg-[#30302e] h-8 text-[12px] rounded-full">Cancel</Button>
-                  <Button size="sm" onClick={() => { setJobToDelete(null); setDeleteDialogOpen(true); }} className="bg-[#c96442] hover:bg-[#a54c30] text-white h-8 text-[12px] rounded-full"><Trash2 className="w-3.5 h-3.5 mr-1.5" /> Delete Selected</Button>
+              <div className="flex flex-col justify-between gap-3 border-b border-[#30302e] bg-[#171715] px-5 py-3 text-white sm:flex-row sm:items-center">
+
+                <span className="text-[12px] font-medium">
+                  {selectedJobs.length} report
+                  {selectedJobs.length === 1 ? "" : "s"} selected
+                </span>
+
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setSelectedJobs([])}
+                    className="h-9 rounded-md text-[11px] text-[#c5c1b6] hover:bg-white/10 hover:text-white"
+                  >
+                    Cancel
+                  </Button>
+
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      setJobToDelete(null);
+                      setDeleteDialogOpen(true);
+                    }}
+                    className="h-9 rounded-md bg-[#c96442] text-[11px] text-white hover:bg-[#ae5438]"
+                  >
+                    <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                    Delete selected
+                  </Button>
                 </div>
               </div>
             )}
 
-            <div className="bg-white border border-black/5 rounded-[24px] shadow-[0_1px_3px_rgba(0,0,0,0.04)] min-h-[400px]">
-              {historyLoading ? (
-                <div className="flex flex-col items-center justify-center h-[400px] w-full px-6 gap-4">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className="w-full h-12 bg-black/[0.04] animate-pulse rounded-lg" />
-                  ))}
-                </div>
-              ) : filteredHistory.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-[400px] text-center px-6">
-                  <div className="w-12 h-12 rounded-full bg-[#f0eee6] flex items-center justify-center mb-4">
-                    <History className="w-5 h-5 text-[#595959]" />
+            {/* Loading state */}
+            {historyLoading && (
+              <div className="space-y-4 p-5 sm:p-6">
+                {[1, 2, 3, 4].map((item) => (
+                  <div
+                    key={item}
+                    className="h-20 animate-pulse rounded-md bg-[#f4f2eb]"
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Error state */}
+            {!historyLoading && historyError && (
+              <div className="px-5 py-20 text-center sm:px-8">
+                <FileText className="mx-auto h-8 w-8 text-[#a09c91]" />
+
+                <h3 className="mt-5 text-[14px] font-semibold text-[#24231f]">
+                  Could not load your reports
+                </h3>
+
+                <p className="mt-2 text-[12px] text-[#89867d]">
+                  There was a problem retrieving your scan history.
+                </p>
+
+                <Button
+                  type="button"
+                  onClick={() => void refetchHistory()}
+                  className="mt-5 rounded-md bg-[#171715] text-[11px] text-white hover:bg-[#30302e]"
+                >
+                  Try again
+                </Button>
+              </div>
+            )}
+
+            {/* Empty state */}
+            {!historyLoading &&
+              !historyError &&
+              filteredHistory.length === 0 && (
+                <div className="flex min-h-[330px] flex-col items-center justify-center px-5 py-16 text-center">
+
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full border border-[#e8e5dc] bg-[#f5f3ed]">
+                    {searchQuery ? (
+                      <Search className="h-5 w-5 text-[#77746c]" />
+                    ) : (
+                      <History className="h-5 w-5 text-[#77746c]" />
+                    )}
                   </div>
-                  <p className="text-[15px] font-medium text-[#141413] mb-1">No reports found</p>
-                  <p className="text-[13px] text-[#595959] max-w-xs">
-                    {searchQuery ? "No reports match your filter criteria." : activeTab === 'all' ? "Scan your first website to populate this list." : `You don't have any ${activeTab.replace('_', ' ')} reports.`}
+
+                  <h3 className="mt-5 text-[15px] font-semibold text-[#24231f]">
+                    {searchQuery
+                      ? "No matching reports"
+                      : "Nothing here yet"}
+                  </h3>
+
+                  <p className="mt-2 max-w-[280px] text-[12px] leading-[1.8] text-[#89867d]">
+                    {searchQuery
+                      ? "Try another domain or clear your search."
+                      : activeTab === "all"
+                        ? "Your completed website audits will appear here. Start your first scan to get going."
+                        : `There are no ${currentTab?.label.toLowerCase()} reports to display.`}
                   </p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left">
-                    <thead>
-                      <tr className="border-b border-[#f0eee6]">
-                        <th className="px-6 py-3 w-12">
-                          <input 
-                            type="checkbox" 
-                            className="w-4 h-4 rounded border-[#d1cfc5] text-[#141413] focus:ring-[#141413] cursor-pointer"
-                            checked={filteredHistory.length > 0 && selectedJobs.length === filteredHistory.length}
-                            onChange={(e) => setSelectedJobs(e.target.checked ? filteredHistory.map(h => h.id) : [])}
-                          />
-                        </th>
-                        <th className="px-6 py-3 text-[11px] font-semibold uppercase tracking-wide text-[#595959] w-1/2">Project</th>
-                        <th className="px-6 py-3 text-[11px] font-semibold uppercase tracking-wide text-[#595959]">Scan Time</th>
-                        <th className="px-6 py-3 text-[11px] font-semibold uppercase tracking-wide text-[#595959]">Status</th>
-                        <th className="px-6 py-3 text-[11px] font-semibold uppercase tracking-wide text-[#595959] text-right">Score</th>
-                        <th className="px-6 py-3 w-12" />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredHistory.map(item => {
-                        const isPinned = item.reports?.[0]?.is_pinned ?? false;
-                        const durationMs = item.completed_at ? new Date(item.completed_at).getTime() - new Date(item.created_at).getTime() : 0;
-                        const durationSecs = Math.max(1, Math.floor(durationMs / 1000));
-                        
-                        return (
-                          <tr key={item.id} className={`border-b border-[#f0eee6] last:border-0 hover:bg-black/[0.02] transition-colors group cursor-pointer ${selectedJobs.includes(item.id) ? 'bg-black/[0.02]' : ''}`} onClick={(e) => {
-                            if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('[role="menuitem"]') || (e.target as HTMLElement).closest('input[type="checkbox"]')) return;
-                            navigate(`/report?jobId=${item.id}`);
-                          }}>
-                            <td className="px-6 py-3">
-                              <input 
-                                type="checkbox" 
-                                className="w-4 h-4 rounded border-[#d1cfc5] text-[#141413] focus:ring-[#141413] cursor-pointer"
-                                checked={selectedJobs.includes(item.id)}
-                                onChange={(e) => {
-                                  if (e.target.checked) setSelectedJobs(prev => [...prev, item.id]);
-                                  else setSelectedJobs(prev => prev.filter(id => id !== item.id));
-                                }}
-                              />
-                            </td>
-                            <td className="px-6 py-3">
-                              <div className="flex items-center gap-3">
-                                <div className="hidden sm:flex h-9 w-9 items-center justify-center rounded-lg border border-black/5 bg-white shadow-sm shrink-0">
-                                  {item.domain ? (
-                                    <img src={`https://www.google.com/s2/favicons?domain=${item.domain}&sz=64`} alt="" className="w-4 h-4 object-contain" onError={(e) => (e.target as HTMLImageElement).style.display = 'none'} />
-                                  ) : (
-                                    <Globe className="w-4 h-4 text-[#595959]" />
-                                  )}
-                                </div>
-                                <div className="min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <p className="font-medium text-[14px] text-[#141413] truncate max-w-[200px]">
-                                      {item.domain ?? new URL(item.url).hostname}
-                                    </p>
-                                    {isPinned && <Pin className="w-3 h-3 text-[#c96442]" />}
-                                  </div>
-                                  <p className="text-[11px] font-mono font-medium text-[#595959] truncate max-w-[200px] mt-0.5">{item.url}</p>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-3">
-                              <div className="flex flex-col text-[13px] text-[#595959]">
-                                <span>{timeAgo(item.created_at)}</span>
-                                {item.completed_at && <span className="text-[11px] mt-0.5">{durationSecs}s duration</span>}
-                              </div>
-                            </td>
-                            <td className="px-6 py-3">
-                              {item.status === 'completed' ? (
-                                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#ECFDF5] px-2 py-0.5 text-[11px] font-medium text-[#065F46] border border-[#A7F3D0]">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-[#059669]"></span>
-                                  Completed
-                                </span>
-                              ) : item.status === 'failed' ? (
-                                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FEF2F2] px-2 py-0.5 text-[11px] font-medium text-[#991B1B] border border-[#FECACA]">
-                                  Failed
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#EFF6FF] px-2 py-0.5 text-[11px] font-medium text-[#1E40AF] border border-[#BFDBFE]">
-                                  <Loader2 className="w-3 h-3 animate-spin" />
-                                  {item.status}
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-6 py-3 text-right">
-                              {item.status === 'completed' ? <ScoreBadge score={item.score} /> : <span className="text-[11px] text-[#595959]">—</span>}
-                            </td>
-                            <td className="px-6 py-3 text-right">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100 data-[state=open]:opacity-100">
-                                    <MoreVertical className="h-4 w-4 text-[#595959]" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-48 bg-white border-black/5 rounded-[16px] shadow-[0_4px_12px_rgba(0,0,0,0.08)] p-1">
-                                  <DropdownMenuItem 
-                                    onClick={() => navigate(`/report?jobId=${item.id}`)}
-                                    className="text-[13px] rounded-[10px] cursor-pointer"
-                                  >
-                                    <FileText className="h-4 w-4 mr-2 text-[#595959]" />
-                                    View Report
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem 
-                                    onClick={() => handleTogglePin(item.id, isPinned)}
-                                    className="text-[13px] rounded-[10px] cursor-pointer"
-                                    disabled={item.status !== 'completed'}
-                                  >
-                                    {isPinned ? <PinOff className="h-4 w-4 mr-2 text-[#595959]" /> : <Pin className="h-4 w-4 mr-2 text-[#595959]" />}
-                                    {isPinned ? 'Unpin Report' : 'Pin Report'}
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem 
-                                    onClick={() => navigator.clipboard.writeText(`${window.location.origin}/report?jobId=${item.id}`)}
-                                    className="text-[13px] rounded-[10px] cursor-pointer"
-                                    disabled={item.status !== 'completed'}
-                                  >
-                                    <Share className="h-4 w-4 mr-2 text-[#595959]" />
-                                    Share Link
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem 
-                                    onClick={() => {
-                                      const normalized = item.domain ?? new URL(item.url).hostname;
-                                      initiateNewScan(normalized);
-                                    }}
-                                    className="text-[13px] rounded-[10px] cursor-pointer"
-                                  >
-                                    <Zap className="h-4 w-4 mr-2 text-[#595959]" />
-                                    Rescan
-                                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator className="bg-black/5" />
-                                  <DropdownMenuItem 
-                                    onClick={() => { setJobToDelete(item.id); setDeleteDialogOpen(true); }}
-                                    className="text-[13px] text-[#c96442] hover:bg-[#fff5f2] rounded-[10px] cursor-pointer focus:text-[#c96442] focus:bg-[#fff5f2]"
-                                  >
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Delete Report
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+
+                  {searchQuery ? (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery("")}
+                      className="mt-5 text-[11px] font-semibold text-[#c96442] hover:text-[#a94f31]"
+                    >
+                      Clear search
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        document
+                          .getElementById("scan-url")
+                          ?.focus()
+                      }
+                      className="mt-5 inline-flex items-center gap-2 rounded-md bg-[#171715] px-4 py-2.5 text-[11px] font-semibold text-white hover:bg-[#30302e]"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Start your first scan
+                    </button>
+                  )}
                 </div>
               )}
-            </div>
-          </div>
 
-          {/* Right: Plan + Usage Info (Linear Style sidebar) */}
-          <div className="space-y-6">
+            {/* Desktop history table */}
+            {!historyLoading &&
+              !historyError &&
+              filteredHistory.length > 0 && (
+                <>
+                  <div className="hidden overflow-x-auto md:block">
+                    <table className="w-full border-collapse text-left">
+                      <thead>
+                        <tr className="border-b border-[#eeeae2] bg-[#fcfbf8]">
+                          <th className="w-12 px-5 py-4">
+                            <input
+                              type="checkbox"
+                              aria-label="Select all visible reports"
+                              checked={allVisibleSelected}
+                              onChange={(event) =>
+                                toggleSelectAll(event.target.checked)
+                              }
+                              className="h-4 w-4 cursor-pointer accent-[#171715]"
+                            />
+                          </th>
 
-            <div className="bg-white border border-black/5 rounded-[24px] p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-              <h2 className="text-[12px] font-semibold text-[#595959] uppercase tracking-wide mb-4">Credit Usage</h2>
-              
-              <div className="flex items-end gap-2 mb-2">
-                <span className="text-[36px] font-bold leading-none text-[#141413]">{profile.credits_remaining}</span>
-                <span className="text-[13px] text-[#595959] pb-1">/ {maxCredits} left</span>
-              </div>
-              
-              <div className="h-1.5 w-full bg-black/[0.04] rounded-full overflow-hidden mb-3">
-                <div
-                  className={`h-full rounded-full transition-all duration-500 ${
-                    usagePercentage > 90 ? "bg-[#c96442]" : usagePercentage > 75 ? "bg-[#eab308]" : "bg-[#141413]"
-                  }`}
-                  style={{ width: `${usagePercentage}%` }}
-                />
-              </div>
-              
-              <p className="text-[12px] text-[#595959] mb-6">{creditsUsed} reports generated this period.</p>
+                          <th className="px-4 py-4 text-[9px] font-bold uppercase tracking-[0.13em] text-[#89867d]">
+                            Website
+                          </th>
 
-              {profile.tier === "free" ? (
-                <div className="p-4 bg-[#FDFBF7] border border-black/5 rounded-[16px]">
-                  <h3 className="text-[13px] font-semibold text-[#141413] flex items-center gap-1.5 mb-1">
-                    <Sparkles className="h-3.5 w-3.5 text-[#c96442]" /> Unlock Pro
-                  </h3>
-                  <p className="text-[12px] text-[#595959] mb-4 leading-relaxed">
-                    50 monthly credits, PDF exports, and AI remediation code snippets.
+                          <th className="px-4 py-4 text-[9px] font-bold uppercase tracking-[0.13em] text-[#89867d]">
+                            Date
+                          </th>
+
+                          <th className="px-4 py-4 text-[9px] font-bold uppercase tracking-[0.13em] text-[#89867d]">
+                            Status
+                          </th>
+
+                          <th className="px-4 py-4 text-right text-[9px] font-bold uppercase tracking-[0.13em] text-[#89867d]">
+                            Score
+                          </th>
+
+                          <th className="w-14 px-3 py-4" />
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {filteredHistory.map((item) => {
+                          const pinned =
+                            item.reports?.[0]?.is_pinned ?? false;
+
+                          const selected = selectedJobs.includes(item.id);
+
+                          return (
+                            <tr
+                              key={item.id}
+                              className={`group border-b border-[#f0eee7] transition-colors last:border-0 hover:bg-[#fbfaf6] ${
+                                selected ? "bg-[#f8f5ef]" : ""
+                              }`}
+                            >
+                              <td className="px-5 py-4">
+                                <input
+                                  type="checkbox"
+                                  aria-label={`Select ${getDomain(item.url)}`}
+                                  checked={selected}
+                                  onChange={(event) =>
+                                    toggleSelect(item.id, event.target.checked)
+                                  }
+                                  className="h-4 w-4 cursor-pointer accent-[#171715]"
+                                />
+                              </td>
+
+                              <td className="max-w-[280px] px-4 py-4">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    navigate(
+                                      `/report?jobId=${encodeURIComponent(item.id)}`
+                                    )
+                                  }
+                                  className="flex min-w-0 items-center gap-3 text-left"
+                                >
+                                  <div className="flex h-9 w-9 shrink-0 items-center justify-center border border-[#e8e5dc] bg-white text-[#77746c]">
+                                    <Globe className="h-4 w-4" />
+                                  </div>
+
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <p className="truncate text-[12px] font-semibold text-[#25241f]">
+                                        {item.domain || getDomain(item.url)}
+                                      </p>
+
+                                      {pinned && (
+                                        <Pin className="h-3 w-3 shrink-0 text-[#c96442]" />
+                                      )}
+                                    </div>
+
+                                    <p className="mt-1 truncate font-mono text-[10px] text-[#99958a]">
+                                      {item.url}
+                                    </p>
+                                  </div>
+                                </button>
+                              </td>
+
+                              <td className="whitespace-nowrap px-4 py-4">
+                                <p className="text-[11px] font-medium text-[#494740]">
+                                  {timeAgo(item.created_at)}
+                                </p>
+
+                                {formatDuration(
+                                  item.created_at,
+                                  item.completed_at
+                                ) && (
+                                  <p className="mt-1 text-[10px] text-[#9a968b]">
+                                    {formatDuration(
+                                      item.created_at,
+                                      item.completed_at
+                                    )} duration
+                                  </p>
+                                )}
+                              </td>
+
+                              <td className="px-4 py-4">
+                                <StatusBadge status={item.status} />
+                              </td>
+
+                              <td className="px-4 py-4 text-right">
+                                {item.status === "completed" ? (
+                                  <ScoreBadge score={item.score} />
+                                ) : (
+                                  <span className="text-[11px] text-[#9a968b]">
+                                    —
+                                  </span>
+                                )}
+                              </td>
+
+                              <td className="px-3 py-4 text-right">
+                                {renderReportActions(item)}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile report cards */}
+                  <div className="divide-y divide-[#eeeae2] md:hidden">
+                    {filteredHistory.map((item) => {
+                      const pinned =
+                        item.reports?.[0]?.is_pinned ?? false;
+
+                      const selected = selectedJobs.includes(item.id);
+
+                      return (
+                        <article
+                          key={item.id}
+                          className={`p-4 transition-colors ${
+                            selected ? "bg-[#f8f5ef]" : "bg-white"
+                          }`}
+                        >
+                          <div className="flex min-w-0 items-start gap-3">
+
+                            <input
+                              type="checkbox"
+                              aria-label={`Select ${getDomain(item.url)}`}
+                              checked={selected}
+                              onChange={(event) =>
+                                toggleSelect(item.id, event.target.checked)
+                              }
+                              className="mt-1 h-4 w-4 shrink-0 cursor-pointer accent-[#171715]"
+                            />
+
+                            <div className="flex min-w-0 flex-1 gap-3">
+
+                              <div className="flex h-10 w-10 shrink-0 items-center justify-center border border-[#e8e5dc] bg-[#faf9f5]">
+                                <Globe className="h-4 w-4 text-[#77746c]" />
+                              </div>
+
+                              <div className="min-w-0 flex-1">
+                                <div className="flex min-w-0 items-center gap-2">
+                                  <h3 className="truncate text-[13px] font-semibold text-[#24231f]">
+                                    {item.domain || getDomain(item.url)}
+                                  </h3>
+
+                                  {pinned && (
+                                    <Pin className="h-3 w-3 shrink-0 text-[#c96442]" />
+                                  )}
+                                </div>
+
+                                <p className="mt-1 truncate font-mono text-[10px] text-[#969287]">
+                                  {item.url}
+                                </p>
+
+                                <div className="mt-3 flex flex-wrap items-center gap-2">
+                                  <StatusBadge status={item.status} />
+
+                                  {item.status === "completed" && (
+                                    <ScoreBadge score={item.score} />
+                                  )}
+                                </div>
+
+                                <p className="mt-3 flex flex-wrap items-center gap-1.5 text-[10px] text-[#89867d]">
+                                  <Clock3 className="h-3 w-3" />
+
+                                  {timeAgo(item.created_at)}
+
+                                  {formatDuration(
+                                    item.created_at,
+                                    item.completed_at
+                                  ) && (
+                                    <>
+                                      <span>·</span>
+
+                                      {formatDuration(
+                                        item.created_at,
+                                        item.completed_at
+                                      )}
+                                    </>
+                                  )}
+                                </p>
+
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    navigate(
+                                      `/report?jobId=${encodeURIComponent(item.id)}`
+                                    )
+                                  }
+                                  className="mt-4 inline-flex items-center gap-2 text-[11px] font-semibold text-[#c96442] hover:text-[#a94f31]"
+                                >
+                                  View report
+                                  <ArrowRight className="h-3 w-3" />
+                                </button>
+                              </div>
+
+                              <div className="-mr-2 shrink-0">
+                                {renderReportActions(item)}
+                              </div>
+
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+
+          </section>
+
+          {/* ======================================================== */}
+          {/* ACCOUNT SIDEBAR                                          */}
+          {/* ======================================================== */}
+
+          <aside className="min-w-0 space-y-5">
+
+            {/* Credit usage */}
+            <section className="border border-[#e8e5dc] bg-white p-5 sm:p-6">
+
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#89867d]">
+                    Subscription
                   </p>
+
+                  <h2 className="mt-2 text-[19px] font-semibold capitalize tracking-tight text-[#24231f]">
+                    {plan} plan
+                  </h2>
+                </div>
+
+                <span className="rounded-md border border-[#e8e5dc] bg-[#faf9f5] px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em] text-[#77746c]">
+                  Active
+                </span>
+              </div>
+
+              <div className="mt-7 border-t border-[#eeeae2] pt-6">
+                <div className="flex items-end justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#89867d]">
+                      Available credits
+                    </p>
+
+                    <p className="mt-2 text-[35px] font-semibold leading-none tracking-[-0.04em] text-[#171715] tabular-nums">
+                      {remainingCredits}
+                      <span className="ml-1 text-[14px] font-medium text-[#89867d]">
+                        / {maxCredits}
+                      </span>
+                    </p>
+                  </div>
+
+                  <div className="pb-1 text-right">
+                    <p className="text-[11px] font-semibold text-[#77746c]">
+                      {Math.round(usagePercentage)}%
+                    </p>
+
+                    <p className="text-[9px] text-[#a09c91]">
+                      Used
+                    </p>
+                  </div>
+                </div>
+
+                <div
+                  className="mt-5 h-2 overflow-hidden rounded-full bg-[#efede6]"
+                  role="progressbar"
+                  aria-label="Credit usage"
+                  aria-valuemin={0}
+                  aria-valuemax={maxCredits}
+                  aria-valuenow={creditsUsed}
+                >
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      usagePercentage >= 90
+                        ? "bg-[#c96442]"
+                        : usagePercentage >= 75
+                          ? "bg-amber-500"
+                          : "bg-[#25241f]"
+                    }`}
+                    style={{
+                      width: `${usagePercentage}%`,
+                    }}
+                  />
+                </div>
+
+                <div className="mt-3 flex items-center justify-between text-[10px] text-[#89867d]">
+                  <span>{creditsUsed} used</span>
+                  <span>{remainingCredits} remaining</span>
+                </div>
+              </div>
+
+              {plan === "free" ? (
+                <div className="mt-7 border border-[#eaded3] bg-[#faf5ef] p-4">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-[#c96442]" />
+
+                    <h3 className="text-[12px] font-semibold text-[#272620]">
+                      Get more from your audits
+                    </h3>
+                  </div>
+
+                  <p className="mt-2 text-[11px] leading-[1.8] text-[#77746c]">
+                    Explore Pro for a higher scan allowance and
+                    additional product features.
+                  </p>
+
                   <Button
+                    type="button"
                     onClick={() => upgradeTier("pro")}
-                    className="w-full bg-[#141413] hover:bg-[#30302e] text-[#faf9f5] rounded-[10px] text-[12px] h-9"
+                    className="mt-4 h-10 w-full rounded-md bg-[#171715] text-[11px] font-semibold text-white hover:bg-[#30302e]"
                   >
-                    Upgrade for $29/mo
+                    Explore Pro plan
+                    <ArrowRight className="ml-2 h-3.5 w-3.5" />
                   </Button>
                 </div>
               ) : (
-                <Button variant="outline" className="w-full bg-white hover:bg-[#FDFBF7] rounded-[10px] border-black/5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] text-[#141413] text-[12px] h-9 transition-colors">
-                  <Settings className="w-3.5 h-3.5 mr-2" /> Manage Billing
-                </Button>
+                <Link
+                  to="/pricing"
+                  className="mt-6 flex min-h-10 items-center justify-center gap-2 border border-[#e8e5dc] text-[11px] font-semibold text-[#555148] transition-colors hover:border-[#c96442] hover:text-[#c96442]"
+                >
+                  View plan details
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
               )}
-            </div>
+            </section>
 
-            <div className="bg-[#FDFBF7] border border-black/5 rounded-[24px] p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-              <h2 className="text-[12px] font-semibold text-[#595959] uppercase tracking-wide mb-4">Quick Stats</h2>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-[20px] font-bold text-[#141413]">{scanHistory.length}</p>
-                  <p className="text-[11px] text-[#595959] uppercase tracking-wider mt-0.5">Total Scans</p>
-                </div>
-                <div>
-                  <p className="text-[20px] font-bold text-[#141413]">
-                    {scanHistory.filter(s => s.score).length > 0 
-                      ? Math.round(scanHistory.filter(s => s.score).reduce((acc, curr) => acc + (curr.score ?? 0), 0) / scanHistory.filter(s => s.score).length)
-                      : "—"}
-                  </p>
-                  <p className="text-[11px] text-[#595959] uppercase tracking-wider mt-0.5">Avg Score</p>
-                </div>
-                <div>
-                  <p className="text-[20px] font-bold text-[#141413]">{scanHistory.filter(s => s.status === 'failed').length}</p>
-                  <p className="text-[11px] text-[#595959] uppercase tracking-wider mt-0.5">Failed</p>
-                </div>
-                <div>
-                  <p className="text-[20px] font-bold text-[#141413]">{scanHistory.filter(s => s.reports?.[0]?.is_pinned).length}</p>
-                  <p className="text-[11px] text-[#595959] uppercase tracking-wider mt-0.5">Pinned</p>
-                </div>
+            {/* Account stats */}
+            <section className="border border-[#e8e5dc] bg-white p-5 sm:p-6">
+
+              <div className="flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-[#c96442]" />
+
+                <h2 className="text-[12px] font-semibold text-[#282721]">
+                  Activity summary
+                </h2>
               </div>
-            </div>
 
-          </div>
+              <div className="mt-5 divide-y divide-[#eeeae2]">
+
+                {[
+                  {
+                    label: "Completed reports",
+                    value: completedScans.length,
+                  },
+                  {
+                    label: "Pinned reports",
+                    value: pinnedCount,
+                  },
+                  {
+                    label: "Active scans",
+                    value: inProgressCount,
+                  },
+                  {
+                    label: "Failed scans",
+                    value: failedCount,
+                  },
+                ].map((metric) => (
+                  <div
+                    key={metric.label}
+                    className="flex items-center justify-between gap-3 py-3"
+                  >
+                    <span className="text-[11px] text-[#77746c]">
+                      {metric.label}
+                    </span>
+
+                    <span className="text-[12px] font-semibold tabular-nums text-[#282721]">
+                      {metric.value}
+                    </span>
+                  </div>
+                ))}
+
+              </div>
+            </section>
+
+            {/* Useful links */}
+            <section className="border border-[#e8e5dc] bg-[#f7f5ef] p-5 sm:p-6">
+
+              <h2 className="text-[12px] font-semibold text-[#282721]">
+                Need a hand?
+              </h2>
+
+              <p className="mt-2 text-[11px] leading-[1.8] text-[#77746c]">
+                Find documentation and guidance to get more out
+                of your website analysis.
+              </p>
+
+              <div className="mt-5 space-y-3">
+
+                <Link
+                  to="/docs"
+                  className="flex items-center justify-between text-[11px] font-medium text-[#555148] transition-colors hover:text-[#c96442]"
+                >
+                  Documentation
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+
+                <Link
+                  to="/sample-report"
+                  className="flex items-center justify-between text-[11px] font-medium text-[#555148] transition-colors hover:text-[#c96442]"
+                >
+                  Sample report
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+
+                <Link
+                  to="/support"
+                  className="flex items-center justify-between text-[11px] font-medium text-[#555148] transition-colors hover:text-[#c96442]"
+                >
+                  Contact support
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+
+              </div>
+            </section>
+
+          </aside>
 
         </div>
       </main>
+
       <Footer />
 
-      {/* Existing Scan Modal */}
-      <Dialog open={showExistingModal} onOpenChange={setShowExistingModal}>
-        <DialogContent className="sm:max-w-[425px] bg-[#FDFBF7] border border-black/5 rounded-[16px] shadow-xl">
+      {/* ================================================================ */}
+      {/* EXISTING REPORT DIALOG                                           */}
+      {/* ================================================================ */}
+
+      <Dialog
+        open={showExistingModal}
+        onOpenChange={setShowExistingModal}
+      >
+        <DialogContent className="w-[calc(100%-32px)] max-w-[450px] rounded-xl border-[#e8e5dc] bg-[#FDFBF7] p-5 sm:p-6">
+
           <DialogHeader>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#ECFDF5] border border-[#A7F3D0]">
-                <Globe className="h-5 w-5 text-[#059669]" />
-              </div>
-              <DialogTitle className="text-[18px] font-serif text-[#141413]">Existing Report Found</DialogTitle>
+            <div className="mb-2 flex h-11 w-11 items-center justify-center border border-emerald-200 bg-emerald-50 text-emerald-700">
+              <CheckCircle2 className="h-5 w-5" />
             </div>
-            <DialogDescription className="text-[14px] text-[#595959]">
-              We found a recent report for <strong className="text-[#141413]">{normalizedUrlForScan}</strong> scanned{" "}
-              <strong className="text-[#141413]">
-                {existingScanDate ? new Date(existingScanDate).toLocaleString() : 'recently'}
-              </strong>.
-              <br/><br/>
-              Viewing the existing report is completely free. Rescanning will use 1 credit.
+
+            <DialogTitle className="font-serif text-[22px] font-medium text-[#171715]">
+              Recent report found
+            </DialogTitle>
+
+            <DialogDescription className="pt-2 text-[13px] leading-[1.8] text-[#77746c]">
+              An existing report was found for{" "}
+              <strong className="break-all text-[#24231f]">
+                {getDomain(normalizedUrlForScan)}
+              </strong>
+              .
+
+              <br />
+
+              <span className="text-[11px]">
+                Previous scan:{" "}
+                {existingScanDate
+                  ? new Date(existingScanDate).toLocaleString()
+                  : "Recently"}
+              </span>
+
+              <br />
+              <br />
+
+              Opening the existing report is free. Running a new
+              scan will use one credit.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex flex-col sm:flex-row gap-3 mt-4">
+
+          <DialogFooter className="mt-5 flex flex-col gap-2 sm:flex-row">
             <Button
+              type="button"
               variant="outline"
               onClick={() => {
                 setShowExistingModal(false);
-                initiateNewScan(normalizedUrlForScan);
+                setScanUrl("");
+
+                const target = normalizeScanUrl(
+                  normalizedUrlForScan
+                );
+
+                if (target) {
+                  void initiateNewScan(target);
+                }
               }}
-              className="rounded-full border-black/10 text-[#141413] hover:bg-black/5 w-full sm:w-auto"
+              className="h-11 w-full rounded-md border-[#e1ddd3] bg-white text-[11px] text-[#24231f] hover:bg-[#f3f1eb] sm:w-auto"
             >
-              Rescan (1 Credit)
+              Run another scan · 1 credit
             </Button>
+
             <Button
+              type="button"
               onClick={() => {
                 setShowExistingModal(false);
-                navigate(`/report?jobId=${existingScanId}`);
+
+                if (existingScanId) {
+                  navigate(
+                    `/report?jobId=${encodeURIComponent(existingScanId)}`
+                  );
+                }
               }}
-              className="rounded-full bg-[#141413] text-[#faf9f5] hover:bg-[#30302e] w-full sm:w-auto shadow-sm"
+              className="h-11 w-full rounded-md bg-[#171715] text-[11px] text-white hover:bg-[#30302e] sm:w-auto"
             >
-              View Existing (Free)
+              View existing report
+              <ArrowRight className="ml-2 h-3.5 w-3.5" />
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <AlertDialog open={deleteDialogOpen} onOpenChange={(open) => {
-        setDeleteDialogOpen(open);
-        if (!open) setJobToDelete(null);
-      }}>
-        <AlertDialogContent className="bg-white border border-black/5 rounded-[24px] sm:rounded-[24px] shadow-[0_8px_32px_rgba(0,0,0,0.08)] max-w-md w-[90vw]">
+
+      {/* ================================================================ */}
+      {/* DELETE CONFIRMATION                                              */}
+      {/* ================================================================ */}
+
+      <AlertDialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          setDeleteDialogOpen(open);
+
+          if (!open) {
+            setJobToDelete(null);
+          }
+        }}
+      >
+        <AlertDialogContent className="w-[calc(100%-32px)] max-w-[440px] rounded-xl border-[#e8e5dc] bg-white">
+
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-[20px] text-[#141413] font-semibold">
-              Delete Report{(!jobToDelete && selectedJobs.length > 1) ? 's' : ''}
+            <div className="mb-2 flex h-10 w-10 items-center justify-center bg-rose-50 text-rose-700">
+              <Trash2 className="h-5 w-5" />
+            </div>
+
+            <AlertDialogTitle className="text-[18px] font-semibold text-[#171715]">
+              Delete{" "}
+              {jobToDelete
+                ? "this report"
+                : `${selectedJobs.length} reports`}
+              ?
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-[#595959] text-[15px] mt-2">
-              Are you sure you want to delete {jobToDelete ? "this report" : `${selectedJobs.length} reports`}? This action cannot be undone and will permanently remove all associated data.
+
+            <AlertDialogDescription className="text-[13px] leading-[1.8] text-[#77746c]">
+              This action permanently deletes the selected report
+              data and associated scan records. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="mt-6 sm:mt-8 gap-3">
-            <AlertDialogCancel className="h-11 rounded-full border border-[#e8e6dc] bg-white text-[#141413] hover:bg-[#f0eee6] font-medium w-full sm:w-auto mt-0">
+
+          <AlertDialogFooter className="mt-4 flex flex-col-reverse gap-2 sm:flex-row">
+
+            <AlertDialogCancel className="mt-0 h-10 w-full rounded-md border-[#e8e5dc] text-[11px] sm:w-auto">
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={confirmDelete} 
-              className="h-11 rounded-full bg-[#c96442] hover:bg-[#b55839] text-white font-medium w-full sm:w-auto"
+
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault();
+                void confirmDelete();
+              }}
+              className="h-10 w-full rounded-md bg-[#c96442] text-[11px] font-semibold text-white hover:bg-[#ad5134] sm:w-auto"
             >
-              Delete Permanently
+              Delete permanently
             </AlertDialogAction>
+
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      <UpgradeModal open={showUpgrade} onOpenChange={setShowUpgrade} />
+      {/* ================================================================ */}
+      {/* UPGRADE MODAL                                                    */}
+      {/* ================================================================ */}
+
+      <UpgradeModal
+        open={showUpgrade}
+        onOpenChange={setShowUpgrade}
+      />
+
     </div>
   );
 };

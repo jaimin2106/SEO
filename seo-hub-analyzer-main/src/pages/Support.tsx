@@ -1,137 +1,71 @@
-// src/pages/Support.tsx
-// Public support page — 3-step wizard that stores tickets in Supabase with full context
 
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
-import { toast } from 'sonner';
-import Navbar from '@/components/seohub/Navbar';
-import Footer from '@/components/seohub/Footer';
 import {
-  LifeBuoy, MessageSquare, Zap, BookOpen, ArrowRight,
-  Send, Loader2, CheckCircle2, ChevronDown, ChevronUp,
-  CreditCard, AlertTriangle, FileText, Headphones, Link2,
-  Bug, Star, User, ChevronRight, ChevronLeft, ScanSearch, FileDown
-} from 'lucide-react';
+  useEffect,
+  useMemo,
+  useState,
+  type ComponentType,
+  type FormEvent,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 
-// ─── Types ────────────────────────────────────────────────────────
+import { AnimatePresence, motion } from "framer-motion";
+import { Link } from "react-router-dom";
+import { toast } from "sonner";
+
+import {
+  AlertCircle,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUpRight,
+  BookOpen,
+  Bug,
+  Check,
+  CheckCircle2,
+  ChevronDown,
+  Clock,
+  CreditCard,
+  FileDown,
+  FileText,
+  Headphones,
+  LifeBuoy,
+  Link2,
+  Loader2,
+  MessageCircle,
+  MessageSquare,
+  Search,
+  Send,
+  ShieldCheck,
+  Sparkles,
+  User,
+  Zap,
+} from "lucide-react";
+
+import type { LucideIcon } from "lucide-react";
+
+import { supabase } from "@/lib/supabase";
+import Navbar from "@/components/seohub/Navbar";
+import Footer from "@/components/seohub/Footer";
+
+/* -------------------------------------------------------------------------- */
+/* Types                                                                      */
+/* -------------------------------------------------------------------------- */
+
 type TicketType =
-  | 'billing' | 'technical' | 'seo_report' | 'scan_failure'
-  | 'pdf_export' | 'account' | 'feature_request' | 'bug_report' | 'general';
+  | "billing"
+  | "technical"
+  | "seo_report"
+  | "scan_failure"
+  | "pdf_export"
+  | "account"
+  | "feature_request"
+  | "bug_report"
+  | "general";
 
-type TicketPriority = 'low' | 'normal' | 'high' | 'urgent';
+type TicketPriority = "low" | "normal" | "high" | "urgent";
 
-// ─── Constants ────────────────────────────────────────────────────
-const TICKET_CATEGORIES: {
-  value: TicketType; label: string; icon: React.FC<any>; desc: string; color: string; bg: string;
-}[] = [
-  { value: 'bug_report',      label: 'Bug Report',         icon: Bug,           desc: 'Something is broken',               color: 'text-rose-500',   bg: 'bg-rose-50' },
-  { value: 'technical',       label: 'Technical Issue',    icon: AlertTriangle, desc: 'Errors or broken features',          color: 'text-red-500',    bg: 'bg-red-50' },
-  { value: 'billing',         label: 'Billing & Payments', icon: CreditCard,    desc: 'Charges, refunds, plan changes',     color: 'text-amber-500',  bg: 'bg-amber-50' },
-  { value: 'seo_report',      label: 'SEO Report',         icon: FileText,      desc: 'Questions about your report',        color: 'text-blue-500',   bg: 'bg-blue-50' },
-  { value: 'scan_failure',    label: 'Scan Failure',       icon: ScanSearch,    desc: 'A scan didn\'t complete',            color: 'text-orange-500', bg: 'bg-orange-50' },
-  { value: 'pdf_export',      label: 'PDF Export',         icon: FileDown,      desc: 'PDF download didn\'t work',          color: 'text-indigo-500', bg: 'bg-indigo-50' },
-  { value: 'feature_request', label: 'Feature Request',    icon: Star,          desc: 'Suggest an improvement',             color: 'text-purple-500', bg: 'bg-purple-50' },
-  { value: 'account',         label: 'Account Issue',      icon: User,          desc: 'Login, profile, data access',        color: 'text-cyan-500',   bg: 'bg-cyan-50' },
-  { value: 'general',         label: 'General Support',    icon: Headphones,    desc: 'Anything else',                      color: 'text-[#c96442]',  bg: 'bg-orange-50' },
-];
-
-const FAQ_ITEMS = [
-  { q: 'How long does a full SEO scan take?',    a: 'Most scans complete in 30–90 seconds. Large sites may take up to 3 minutes. You\'ll see a real-time progress indicator on your dashboard.' },
-  { q: 'How do I upgrade my plan?',              a: 'Log in to your dashboard and click "Upgrade" in the top nav. You\'ll be taken to the billing portal where you can choose Pro or Scale.' },
-  { q: 'Can I export my report as a PDF?',       a: 'PDF export is available on Pro and Scale plans. Open any completed report and click "Export PDF" in the top-right corner.' },
-  { q: 'What happens to my credits each month?', a: 'Credits reset at the beginning of each billing cycle. Unused credits do not roll over, but we notify you 3 days before expiry.' },
-  { q: 'How is AI visibility scored?',           a: 'We analyse your page\'s semantic structure, entity clarity, and structured data to estimate how likely your content is to appear in AI-generated answers (Perplexity, ChatGPT, Gemini).' },
-  { q: 'Can I cancel anytime?',                  a: 'Yes — cancel from the billing page at any time. Your plan stays active until the end of the current billing period with no prorated refunds.' },
-];
-
-const QUICK_LINKS = [
-  { label: 'Documentation', href: '/docs',         icon: BookOpen,      color: 'text-blue-600',   bg: 'bg-blue-50   border-blue-200' },
-  { label: 'API Reference',  href: '/api-reference', icon: Zap,           color: 'text-emerald-600',bg: 'bg-emerald-50 border-emerald-200' },
-  { label: 'Blog & Guides',  href: '/blog',          icon: MessageSquare, color: 'text-purple-600', bg: 'bg-purple-50  border-purple-200' },
-];
-
-const PRIORITY_CFG = {
-  low:    { label: 'Low',    ring: 'border-gray-300  bg-gray-50  text-gray-600'  },
-  normal: { label: 'Normal', ring: 'border-blue-300  bg-blue-50  text-blue-700'  },
-  high:   { label: 'High',   ring: 'border-amber-300 bg-amber-50 text-amber-700' },
-  urgent: { label: 'Urgent', ring: 'border-red-300   bg-red-50   text-red-700'   },
-};
-
-const stepVariants = {
-  enter: (d: number) => ({ x: d > 0 ? 50 : -50, opacity: 0 }),
-  center: { x: 0, opacity: 1 },
-  exit:  (d: number) => ({ x: d > 0 ? -50 : 50, opacity: 0 }),
-};
-
-// ─── Page ─────────────────────────────────────────────────────────
-const Support: React.FC = () => (
-  <div className="min-h-screen bg-[#f5f4ed] font-sans">
-    <Navbar />
-
-    {/* Hero Banner */}
-    <div className="bg-[#141413] pt-32 pb-24 relative overflow-hidden">
-      <div className="absolute inset-0 opacity-[0.06] pointer-events-none"
-        style={{ backgroundImage: 'linear-gradient(to right,#30302e 1px,transparent 1px),linear-gradient(to bottom,#30302e 1px,transparent 1px)', backgroundSize: '4rem 4rem' }} />
-      <div className="absolute left-1/2 top-0 -translate-x-1/2 h-[500px] w-[800px] rounded-full bg-[#c96442]/10 blur-[140px] pointer-events-none" />
-      <div className="container-page relative z-10 text-center">
-        <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          <span className="inline-flex items-center gap-2 rounded-full bg-[#c96442]/10 border border-[#c96442]/20 px-4 py-1.5 text-[12px] font-semibold text-[#c96442] mb-7 uppercase tracking-wider">
-            <LifeBuoy className="h-3.5 w-3.5" /> Support Center
-          </span>
-          <h1 className="font-serif text-[52px] sm:text-[68px] font-medium leading-[1.05] tracking-tight text-[#faf9f5] mb-5">
-            How can we help?
-          </h1>
-          <p className="text-[18px] text-[#87867f] max-w-[38rem] mx-auto leading-relaxed">
-            Browse answers to common questions, or raise a ticket — our team responds within 24 hours.
-          </p>
-        </motion.div>
-      </div>
-    </div>
-
-    {/* Content */}
-    <div className="container-page py-20 max-w-[1120px] mx-auto">
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-16 items-start">
-
-        {/* Left — Wizard */}
-        <section>
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#87867f] mb-8">Submit a ticket</p>
-          <TicketWizard />
-        </section>
-
-        {/* Right — sticky sidebar */}
-        <aside className="space-y-10 lg:sticky lg:top-28">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#87867f] mb-5">Resources</p>
-            <div className="space-y-3">
-              {QUICK_LINKS.map(ql => (
-                <motion.div key={ql.label} whileHover={{ x: 3 }} transition={{ type: 'spring', stiffness: 300, damping: 20 }}>
-                  <Link to={ql.href}
-                    className={`flex items-center gap-4 px-4 py-3.5 rounded-xl border ${ql.bg} group`}>
-                    <ql.icon className={`h-4 w-4 ${ql.color} shrink-0`} strokeWidth={1.75} />
-                    <span className="text-[13px] font-semibold text-[#141413]">{ql.label}</span>
-                    <ArrowRight className="h-4 w-4 text-gray-400 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </Link>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#87867f] mb-5">Common Questions</p>
-            <FaqAccordion />
-          </div>
-        </aside>
-      </div>
-    </div>
-
-    <Footer />
-  </div>
-);
-
-// ─── Ticket Wizard ────────────────────────────────────────────────
 interface FormState {
-  type: TicketType | '';
+  type: TicketType | "";
   subject: string;
   description: string;
   pageUrl: string;
@@ -140,54 +74,783 @@ interface FormState {
   email: string;
 }
 
+interface Category {
+  value: TicketType;
+  label: string;
+  description: string;
+  icon: LucideIcon;
+  color: string;
+  background: string;
+}
+
+interface FAQ {
+  question: string;
+  answer: string;
+  category: string;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Constants                                                                  */
+/* -------------------------------------------------------------------------- */
+
 const INITIAL_FORM: FormState = {
-  type: '', subject: '', description: '', pageUrl: '',
-  priority: 'normal', name: '', email: '',
+  type: "",
+  subject: "",
+  description: "",
+  pageUrl: "",
+  priority: "normal",
+  name: "",
+  email: "",
 };
 
-const TicketWizard: React.FC = () => {
+const CATEGORIES: Category[] = [
+  {
+    value: "technical",
+    label: "Technical issue",
+    description: "Something isn't working correctly.",
+    icon: AlertCircle,
+    color: "text-[#c96442]",
+    background: "bg-[#f8eee9]",
+  },
+  {
+    value: "scan_failure",
+    label: "Scan failure",
+    description: "A website scan failed or got stuck.",
+    icon: Zap,
+    color: "text-[#c96442]",
+    background: "bg-[#f8eee9]",
+  },
+  {
+    value: "billing",
+    label: "Billing & payments",
+    description: "Plans, charges, credits, or payments.",
+    icon: CreditCard,
+    color: "text-[#8a713e]",
+    background: "bg-[#f5f0e4]",
+  },
+  {
+    value: "seo_report",
+    label: "SEO report",
+    description: "Questions about audit findings or scores.",
+    icon: FileText,
+    color: "text-[#657b9c]",
+    background: "bg-[#edf1f7]",
+  },
+  {
+    value: "pdf_export",
+    label: "PDF export",
+    description: "Report downloads or PDF problems.",
+    icon: FileDown,
+    color: "text-[#756a9b]",
+    background: "bg-[#f0edf7]",
+  },
+  {
+    value: "account",
+    label: "Account & access",
+    description: "Login, profile, or account access.",
+    icon: User,
+    color: "text-[#577d78]",
+    background: "bg-[#edf4f1]",
+  },
+  {
+    value: "bug_report",
+    label: "Report a bug",
+    description: "Report unexpected behaviour.",
+    icon: Bug,
+    color: "text-[#a35c62]",
+    background: "bg-[#f7edee]",
+  },
+  {
+    value: "feature_request",
+    label: "Feature request",
+    description: "Suggest a feature or improvement.",
+    icon: Sparkles,
+    color: "text-[#92704d]",
+    background: "bg-[#f6f0e8]",
+  },
+  {
+    value: "general",
+    label: "Something else",
+    description: "Other questions and general support.",
+    icon: Headphones,
+    color: "text-[#c96442]",
+    background: "bg-[#f8eee9]",
+  },
+];
+
+const PRIORITIES: {
+  value: TicketPriority;
+  label: string;
+  description: string;
+  style: string;
+  activeStyle: string;
+}[] = [
+  {
+    value: "low",
+    label: "Low",
+    description: "General question",
+    style: "border-[#e8e6dc] text-[#77746c]",
+    activeStyle: "border-[#77746c] bg-[#f1f0eb] text-[#44423c]",
+  },
+  {
+    value: "normal",
+    label: "Normal",
+    description: "Standard request",
+    style: "border-[#e8e6dc] text-[#77746c]",
+    activeStyle: "border-[#657b9c] bg-[#edf1f7] text-[#506887]",
+  },
+  {
+    value: "high",
+    label: "High",
+    description: "Work is affected",
+    style: "border-[#e8e6dc] text-[#77746c]",
+    activeStyle: "border-[#c18a42] bg-[#faf3e7] text-[#936524]",
+  },
+  {
+    value: "urgent",
+    label: "Urgent",
+    description: "Critical disruption",
+    style: "border-[#e8e6dc] text-[#77746c]",
+    activeStyle: "border-[#bf716c] bg-[#faeeee] text-[#a54d48]",
+  },
+];
+
+const FAQ_ITEMS: FAQ[] = [
+  {
+    category: "Scanning",
+    question: "How long does a website scan take?",
+    answer:
+      "Most scans complete in approximately 30–90 seconds. Larger websites or complex rendering requirements may take longer. You can monitor available progress from your dashboard.",
+  },
+  {
+    category: "Credits",
+    question: "What happens when I run out of credits?",
+    answer:
+      "You will need an eligible plan or additional available credits to initiate another scan. Your dashboard displays your remaining credit balance.",
+  },
+  {
+    category: "Reports",
+    question: "Can I export my SEO report as a PDF?",
+    answer:
+      "PDF export is available on eligible plans. Open a completed report and use its Export PDF action when the feature is available on your account.",
+  },
+  {
+    category: "Billing",
+    question: "How can I upgrade my subscription?",
+    answer:
+      "Open your account dashboard and explore the available subscription plans. Select the plan that matches your requirements and follow the billing flow.",
+  },
+  {
+    category: "Reports",
+    question: "Can I run another scan for the same website?",
+    answer:
+      "Yes. When a recent completed scan is detected, the application may offer you the option to open the existing report or start another scan.",
+  },
+  {
+    category: "Account",
+    question: "How do I contact the support team?",
+    answer:
+      "Choose the appropriate issue category on this page, describe your question, and submit your contact details. Our support team can follow up using the email address provided.",
+  },
+];
+
+const RESOURCES = [
+  {
+    title: "Documentation",
+    description: "Learn how to use the platform.",
+    href: "/docs",
+    icon: BookOpen,
+  },
+  {
+    title: "API reference",
+    description: "Explore developer integration details.",
+    href: "/api-reference",
+    icon: Zap,
+  },
+  {
+    title: "Sample report",
+    description: "Understand your SEO audit output.",
+    href: "/sample-report",
+    icon: FileText,
+  },
+  {
+    title: "Blog & guides",
+    description: "Explore practical SEO resources.",
+    href: "/blog",
+    icon: MessageSquare,
+  },
+];
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/* -------------------------------------------------------------------------- */
+/* Animation                                                                  */
+/* -------------------------------------------------------------------------- */
+
+const fadeUp = {
+  hidden: {
+    opacity: 0,
+    y: 16,
+  },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.5,
+      ease: [0.22, 1, 0.36, 1] as [
+        number,
+        number,
+        number,
+        number
+      ],
+    },
+  },
+};
+
+const stepVariants = {
+  enter: (direction: number) => ({
+    opacity: 0,
+    x: direction > 0 ? 24 : -24,
+  }),
+  center: {
+    opacity: 1,
+    x: 0,
+  },
+  exit: (direction: number) => ({
+    opacity: 0,
+    x: direction > 0 ? -24 : 24,
+  }),
+};
+
+/* -------------------------------------------------------------------------- */
+/* Helpers                                                                    */
+/* -------------------------------------------------------------------------- */
+
+function updateFormField<K extends keyof FormState>(
+  setForm: Dispatch<SetStateAction<FormState>>,
+  key: K,
+  value: FormState[K]
+) {
+  setForm((previous) => ({
+    ...previous,
+    [key]: value,
+  }));
+}
+
+function validateOptionalUrl(value: string): boolean {
+  if (!value.trim()) return true;
+
+  try {
+    const url = new URL(value);
+
+    return (
+      ["http:", "https:"].includes(url.protocol) &&
+      Boolean(url.hostname)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function getCategory(value: TicketType | "") {
+  return CATEGORIES.find((category) => category.value === value);
+}
+
+function getContactName(user: {
+  user_metadata?: Record<string, unknown>;
+}): string {
+  const metadata = user.user_metadata;
+
+  if (!metadata) return "";
+
+  const possibleName =
+    metadata.full_name ||
+    metadata.name ||
+    metadata.display_name;
+
+  return typeof possibleName === "string"
+    ? possibleName
+    : "";
+}
+
+/* -------------------------------------------------------------------------- */
+/* Page                                                                       */
+/* -------------------------------------------------------------------------- */
+
+const Support = () => {
+  const [faqSearch, setFaqSearch] = useState("");
+
+  const filteredFaqs = useMemo(() => {
+    const query = faqSearch.trim().toLowerCase();
+
+    if (!query) return FAQ_ITEMS;
+
+    return FAQ_ITEMS.filter((item) =>
+      `${item.question} ${item.answer} ${item.category}`
+        .toLowerCase()
+        .includes(query)
+    );
+  }, [faqSearch]);
+
+  return (
+    <div className="min-h-screen bg-[#f5f4ed] font-sans text-[#141413]">
+      <Navbar />
+
+      <main className="pt-[76px]">
+
+        {/* ============================================================ */}
+        {/* HERO                                                         */}
+        {/* ============================================================ */}
+
+        <section className="relative overflow-hidden border-b border-[#30302e] bg-[#141413]">
+
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 opacity-[0.045]"
+            style={{
+              backgroundImage:
+                "linear-gradient(to right,#aaa79e 1px,transparent 1px),linear-gradient(to bottom,#aaa79e 1px,transparent 1px)",
+              backgroundSize: "64px 64px",
+            }}
+          />
+
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-28 -top-40 h-[450px] w-[450px] rounded-full border border-[#c96442]/20"
+          />
+
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-12 -top-24 h-[320px] w-[320px] rounded-full border border-[#c96442]/15"
+          />
+
+          <div className="relative mx-auto max-w-[1320px] px-5 pb-14 pt-14 sm:px-8 sm:pb-20 sm:pt-20 lg:px-12 lg:pt-24">
+
+            <motion.div
+              initial="hidden"
+              animate="visible"
+              variants={{
+                hidden: {},
+                visible: {
+                  transition: {
+                    staggerChildren: 0.12,
+                  },
+                },
+              }}
+            >
+              <motion.div variants={fadeUp}>
+                <span className="inline-flex items-center gap-2 border border-[#c96442]/30 bg-[#c96442]/10 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#d18a64]">
+                  <LifeBuoy className="h-3.5 w-3.5" />
+                  Customer support
+                </span>
+              </motion.div>
+
+              <motion.div
+                variants={fadeUp}
+                className="mt-8 grid gap-10 lg:grid-cols-[1fr_310px] lg:items-end"
+              >
+                <div>
+                  <h1 className="max-w-[790px] font-serif text-[43px] font-medium leading-[1.08] tracking-[-0.04em] text-[#faf9f5] sm:text-[60px] lg:text-[70px]">
+                    We're here to help you{" "}
+                    <span className="text-[#c96442]">
+                      move forward.
+                    </span>
+                  </h1>
+
+                  <p className="mt-6 max-w-[600px] text-[14px] leading-[1.9] text-[#aaa79e] sm:text-[16px]">
+                    Find answers, get help with your account, or
+                    tell us what's happening. We'll make sure
+                    your request reaches the right place.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 border-t border-white/10 pt-6 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
+                  <div>
+                    <MessageCircle className="h-5 w-5 text-[#d18a64]" />
+
+                    <p className="mt-3 text-[11px] font-semibold text-[#faf9f5]">
+                      Personal support
+                    </p>
+
+                    <p className="mt-1 text-[10px] leading-relaxed text-[#87867f]">
+                      Get help with your request.
+                    </p>
+                  </div>
+
+                  <div>
+                    <ShieldCheck className="h-5 w-5 text-[#d18a64]" />
+
+                    <p className="mt-3 text-[11px] font-semibold text-[#faf9f5]">
+                      Context included
+                    </p>
+
+                    <p className="mt-1 text-[10px] leading-relaxed text-[#87867f]">
+                      Share details to speed things up.
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+
+          </div>
+        </section>
+
+        {/* ============================================================ */}
+        {/* SUPPORT CONTENT                                              */}
+        {/* ============================================================ */}
+
+        <section className="mx-auto max-w-[1320px] px-5 py-12 sm:px-8 sm:py-16 lg:px-12 lg:py-20">
+
+          <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_340px] xl:gap-16">
+
+            {/* Ticket workflow */}
+            <div className="min-w-0">
+
+              <div className="mb-7 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#c96442]">
+                    Support request
+                  </span>
+
+                  <h2 className="mt-2 font-serif text-[29px] font-medium tracking-[-0.025em] text-[#171715] sm:text-[34px]">
+                    How can we assist?
+                  </h2>
+                </div>
+
+                <p className="text-[11px] text-[#89867d]">
+                  Usually takes 2–3 minutes
+                </p>
+              </div>
+
+              <TicketWizard />
+            </div>
+
+            {/* Right sidebar */}
+            <aside className="space-y-10 lg:sticky lg:top-28">
+
+              {/* What happens next */}
+              <section>
+                <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#c96442]">
+                  What happens next
+                </span>
+
+                <div className="mt-6 space-y-6">
+
+                  {[
+                    {
+                      number: "01",
+                      title: "Submit your request",
+                      description:
+                        "Tell us what happened and share the details we need.",
+                    },
+                    {
+                      number: "02",
+                      title: "We review the issue",
+                      description:
+                        "Your request is recorded for the support team to review.",
+                    },
+                    {
+                      number: "03",
+                      title: "We get back to you",
+                      description:
+                        "We'll follow up using the email address you provided.",
+                    },
+                  ].map((item, index) => (
+                    <div
+                      key={item.number}
+                      className="flex gap-4"
+                    >
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center border border-[#e1ddd3] bg-white font-mono text-[10px] font-semibold text-[#c96442]">
+                        {item.number}
+                      </div>
+
+                      <div className="min-w-0">
+                        <h3 className="text-[13px] font-semibold text-[#272620]">
+                          {item.title}
+                        </h3>
+
+                        <p className="mt-1 text-[11px] leading-[1.8] text-[#858279]">
+                          {item.description}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              {/* Resources */}
+              <section className="border-t border-[#e3e0d7] pt-8">
+                <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#c96442]">
+                  Self-service resources
+                </span>
+
+                <div className="mt-5 divide-y divide-[#e8e6dc] border-y border-[#e8e6dc] bg-white">
+                  {RESOURCES.map((resource) => {
+                    const Icon = resource.icon;
+
+                    return (
+                      <Link
+                        key={resource.href}
+                        to={resource.href}
+                        className="group flex items-center gap-3 px-4 py-4 transition-colors hover:bg-[#faf9f5]"
+                      >
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center bg-[#f3f1ea] text-[#77746c] transition-colors group-hover:bg-[#f8eee9] group-hover:text-[#c96442]">
+                          <Icon className="h-4 w-4" />
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[12px] font-semibold text-[#292822]">
+                            {resource.title}
+                          </p>
+
+                          <p className="mt-0.5 text-[10px] text-[#89867d]">
+                            {resource.description}
+                          </p>
+                        </div>
+
+                        <ArrowUpRight
+                          className="h-4 w-4 shrink-0 text-[#a7a297] transition-colors group-hover:text-[#c96442]"
+                        />
+                      </Link>
+                    );
+                  })}
+                </div>
+              </section>
+
+              {/* FAQ */}
+              <section className="border-t border-[#e3e0d7] pt-8">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#c96442]">
+                    Knowledge base
+                  </span>
+
+                  <h2 className="mt-2 font-serif text-[24px] font-medium text-[#171715]">
+                    Common questions
+                  </h2>
+                </div>
+
+                <div className="relative mt-5">
+                  <Search className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#979387]" />
+
+                  <input
+                    type="search"
+                    value={faqSearch}
+                    onChange={(event) =>
+                      setFaqSearch(event.target.value)
+                    }
+                    placeholder="Search questions..."
+                    aria-label="Search frequently asked questions"
+                    className="h-10 w-full border border-[#e4e1d8] bg-white pl-9 pr-3 text-[11px] text-[#292822] outline-none placeholder:text-[#a09c92] focus:border-[#c96442]"
+                  />
+                </div>
+
+                <div className="mt-4 divide-y divide-[#e8e6dc]">
+                  {filteredFaqs.map((faq) => (
+                    <details
+                      key={faq.question}
+                      className="group py-4"
+                    >
+                      <summary className="flex cursor-pointer list-none items-start justify-between gap-3 [&::-webkit-details-marker]:hidden">
+                        <div className="min-w-0">
+                          <span className="mb-2 block text-[9px] font-bold uppercase tracking-[0.13em] text-[#c96442]">
+                            {faq.category}
+                          </span>
+
+                          <span className="text-[12px] font-semibold leading-[1.6] text-[#33312b]">
+                            {faq.question}
+                          </span>
+                        </div>
+
+                        <ChevronDown className="mt-0.5 h-4 w-4 shrink-0 text-[#89867d] transition-transform group-open:rotate-180" />
+                      </summary>
+
+                      <p className="pt-3 text-[11px] leading-[1.9] text-[#77746c]">
+                        {faq.answer}
+                      </p>
+                    </details>
+                  ))}
+
+                  {filteredFaqs.length === 0 && (
+                    <p className="py-8 text-center text-[11px] text-[#89867d]">
+                      No matching questions found.
+                    </p>
+                  )}
+                </div>
+              </section>
+
+              {/* Contact note */}
+              <div className="border border-[#dedbd1] bg-[#efede5] p-5">
+                <div className="flex items-center gap-2">
+                  <Headphones className="h-4 w-4 text-[#c96442]" />
+
+                  <h3 className="text-[12px] font-semibold text-[#292822]">
+                    Still need assistance?
+                  </h3>
+                </div>
+
+                <p className="mt-2 text-[11px] leading-[1.8] text-[#77746c]">
+                  Submit a support request with as much relevant
+                  information as possible so the team can investigate.
+                </p>
+              </div>
+
+            </aside>
+          </div>
+        </section>
+      </main>
+
+      <Footer />
+    </div>
+  );
+};
+
+/* -------------------------------------------------------------------------- */
+/* Ticket Wizard                                                              */
+/* -------------------------------------------------------------------------- */
+
+const TicketWizard = () => {
   const [step, setStep] = useState(0);
-  const [dir, setDir] = useState(1);
+  const [direction, setDirection] = useState(1);
+
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
+
   const [submitting, setSubmitting] = useState(false);
   const [ticketId, setTicketId] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState("");
 
-  // Pre-fill session user data
+  /* ---------------------------------------------------------------------- */
+  /* Prefill contact details                                                */
+  /* ---------------------------------------------------------------------- */
+
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setForm(p => ({
-          ...p,
-          email: p.email || session.user.email || '',
-          name: p.name || session.user.user_metadata?.full_name || '',
-        }));
-      }
-    });
+    let cancelled = false;
+
+    const loadSession = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (cancelled || !session?.user) return;
+
+      const user = session.user;
+
+      setForm((previous) => ({
+        ...previous,
+        name: previous.name || getContactName(user),
+        email: previous.email || user.email || "",
+      }));
+    };
+
+    void loadSession();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const go = (next: number) => { setDir(next > step ? 1 : -1); setStep(next); };
+  /* ---------------------------------------------------------------------- */
+  /* Navigation                                                             */
+  /* ---------------------------------------------------------------------- */
 
-  const handleSubmit = async () => {
-    if (!form.name.trim() || !form.email.trim() || !form.email.includes('@')) {
-      toast.error('Please provide a valid name and email address.');
-      return;
+  const goToStep = (nextStep: number) => {
+    setDirection(nextStep > step ? 1 : -1);
+    setStep(nextStep);
+    setSubmitError("");
+  };
+
+  const updateField = <K extends keyof FormState>(
+    key: K,
+    value: FormState[K]
+  ) => {
+    updateFormField(setForm, key, value);
+  };
+
+  const selectedCategory = getCategory(form.type);
+
+  /* ---------------------------------------------------------------------- */
+  /* Validation                                                             */
+  /* ---------------------------------------------------------------------- */
+
+  const validateDetails = (): boolean => {
+    if (!form.type) {
+      toast.error("Please select a support category.");
+      return false;
     }
+
+    if (form.subject.trim().length < 5) {
+      toast.error("Your subject must contain at least 5 characters.");
+      return false;
+    }
+
+    if (form.description.trim().length < 15) {
+      toast.error("Please provide at least 15 characters of detail.");
+      return false;
+    }
+
+    if (form.description.length > 2000) {
+      toast.error("Your description must be under 2,000 characters.");
+      return false;
+    }
+
+    if (!validateOptionalUrl(form.pageUrl)) {
+      toast.error("Please enter a valid HTTP or HTTPS page URL.");
+      return false;
+    }
+
+    return true;
+  };
+
+  const validateContact = (): boolean => {
+    if (form.name.trim().length < 2) {
+      toast.error("Please enter your full name.");
+      return false;
+    }
+
+    if (!EMAIL_PATTERN.test(form.email.trim())) {
+      toast.error("Please enter a valid email address.");
+      return false;
+    }
+
+    return true;
+  };
+
+  /* ---------------------------------------------------------------------- */
+  /* Submit ticket                                                          */
+  /* ---------------------------------------------------------------------- */
+
+  const handleSubmit = async (event?: FormEvent) => {
+    event?.preventDefault();
+
+    if (submitting) return;
+
+    if (!validateContact()) return;
+
     setSubmitting(true);
+    setSubmitError("");
+
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
       const userId = session?.user?.id ?? null;
 
-      // Collect browser context automatically
       const browserInfo = [
-        navigator.userAgent,
-        `Screen: ${window.screen.width}x${window.screen.height}`,
-        `Lang: ${navigator.language}`,
-      ].join(' | ');
+        typeof navigator !== "undefined"
+          ? navigator.userAgent
+          : "Unavailable",
+        typeof window !== "undefined"
+          ? `Screen: ${window.screen.width}x${window.screen.height}`
+          : "Screen: unavailable",
+        typeof navigator !== "undefined"
+          ? `Language: ${navigator.language}`
+          : "Language: unavailable",
+      ].join(" | ");
 
       const payload = {
         user_id: userId,
-        type: form.type || 'general',
-        status: 'open',
+        type: form.type || "general",
+        status: "open",
         priority: form.priority,
         subject: form.subject.trim(),
         description: form.description.trim(),
@@ -197,393 +860,930 @@ const TicketWizard: React.FC = () => {
         browser_info: browserInfo,
       };
 
-      let query = supabase.from('support_tickets').insert(payload);
-      
-      // Only request the inserted row back if the user is authenticated. 
-      // Otherwise Postgres throws an RLS violation on the RETURNING clause since anon users have no SELECT access.
+      /*
+       * Keep separate insert paths:
+       * Anonymous users may have INSERT permission but no SELECT
+       * permission under the support_tickets RLS policy.
+       */
       if (userId) {
-        query = query.select('id').single() as any;
+        const { data, error } = await supabase
+          .from("support_tickets")
+          .insert(payload)
+          .select("id")
+          .single();
+
+        if (error) throw error;
+
+        setTicketId(data?.id ?? null);
+      } else {
+        const { error } = await supabase
+          .from("support_tickets")
+          .insert(payload);
+
+        if (error) throw error;
+
+        setTicketId(null);
       }
 
-      const { data, error } = await query;
+      setDirection(1);
+      setStep(3);
 
-      if (error) {
-        console.error('Supabase insert error:', error);
-        throw new Error(error.message);
-      }
+      toast.success("Your support request has been submitted.");
+    } catch (error) {
+      console.error("Support ticket submission failed:", error);
 
-      setTicketId((data as { id?: string } | null)?.id ?? null);
-      go(3);
-    } catch (err: any) {
-      console.error('Ticket submit error:', err);
-      toast.error(err.message || 'Failed to submit ticket. Please try again.');
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Please try submitting your request again.";
+
+      setSubmitError(message);
+
+      toast.error("We couldn't submit your request.");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const STEP_LABELS = ['Category', 'Details', 'Contact'];
+  /* ---------------------------------------------------------------------- */
+  /* Reset                                                                  */
+  /* ---------------------------------------------------------------------- */
+
+  const resetWizard = () => {
+    setForm(INITIAL_FORM);
+    setTicketId(null);
+    setSubmitError("");
+    goToStep(0);
+  };
+
+  /* ---------------------------------------------------------------------- */
+  /* Steps                                                                  */
+  /* ---------------------------------------------------------------------- */
+
+  const stepLabels = [
+    "Topic",
+    "Details",
+    "Contact",
+  ];
 
   return (
-    <div className="bg-white rounded-2xl border border-[#e8e6dc] shadow-[0_4px_40px_rgba(0,0,0,0.06)] overflow-hidden">
-      {/* Progress bar */}
+    <div className="overflow-hidden border border-[#e5e2d8] bg-white shadow-[0_8px_40px_rgba(20,20,19,0.055)]">
+
+      {/* ================================================================ */}
+      {/* PROGRESS                                                         */}
+      {/* ================================================================ */}
+
       {step < 3 && (
-        <div className="px-8 pt-7 pb-6 border-b border-[#e8e6dc] bg-[#faf9f5]">
-          <div className="flex items-center gap-0">
-            {STEP_LABELS.map((label, i) => (
-              <React.Fragment key={label}>
-                <div className="flex items-center gap-2.5">
-                  <div className={`h-8 w-8 rounded-full flex items-center justify-center text-[12px] font-bold border-2 transition-all duration-200 ${
-                    i < step  ? 'border-[#c96442] bg-[#c96442] text-white'
-                    : i === step ? 'border-[#141413] bg-[#141413] text-white'
-                    : 'border-[#e8e6dc] bg-white text-[#b0aea5]'
-                  }`}>
-                    {i < step ? <CheckCircle2 className="h-4 w-4" /> : i + 1}
+        <div className="border-b border-[#e8e6dc] bg-[#faf9f5] px-5 py-5 sm:px-8 sm:py-6">
+
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#77746c]">
+              Request process
+            </p>
+
+            <p className="text-[10px] font-semibold text-[#c96442]">
+              Step {step + 1} of 3
+            </p>
+          </div>
+
+          <div className="mt-5 flex items-center">
+            {stepLabels.map((label, index) => {
+              const completed = index < step;
+              const active = index === step;
+
+              return (
+                <div
+                  key={label}
+                  className="flex min-w-0 flex-1 items-center"
+                >
+                  <div className="flex shrink-0 items-center gap-2">
+                    <div
+                      className={`flex h-8 w-8 items-center justify-center rounded-full border text-[10px] font-bold transition-colors ${
+                        completed
+                          ? "border-[#c96442] bg-[#c96442] text-white"
+                          : active
+                            ? "border-[#171715] bg-[#171715] text-white"
+                            : "border-[#e3e0d7] bg-white text-[#9a968b]"
+                      }`}
+                    >
+                      {completed ? (
+                        <Check className="h-4 w-4" />
+                      ) : (
+                        `0${index + 1}`
+                      )}
+                    </div>
+
+                    <span
+                      className={`hidden text-[10px] font-semibold sm:block ${
+                        active
+                          ? "text-[#171715]"
+                          : completed
+                            ? "text-[#c96442]"
+                            : "text-[#9a968b]"
+                      }`}
+                    >
+                      {label}
+                    </span>
                   </div>
-                  <span className={`text-[13px] font-semibold hidden sm:block transition-colors ${i === step ? 'text-[#141413]' : i < step ? 'text-[#c96442]' : 'text-[#b0aea5]'}`}>
-                    {label}
-                  </span>
+
+                  {index < stepLabels.length - 1 && (
+                    <div
+                      className={`mx-2 h-px min-w-3 flex-1 sm:mx-4 ${
+                        completed
+                          ? "bg-[#c96442]"
+                          : "bg-[#e3e0d7]"
+                      }`}
+                    />
+                  )}
                 </div>
-                {i < STEP_LABELS.length - 1 && (
-                  <div className={`flex-1 h-[2px] mx-4 rounded-full transition-colors duration-300 ${i < step ? 'bg-[#c96442]' : 'bg-[#e8e6dc]'}`} />
-                )}
-              </React.Fragment>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
 
-      {/* Step content */}
-      <div className="p-8">
-        <AnimatePresence custom={dir} mode="wait">
-          <motion.div key={step} custom={dir} variants={stepVariants}
-            initial="enter" animate="center" exit="exit"
-            transition={{ duration: 0.2, ease: 'easeOut' }}>
-            {step === 0 && <StepCategory selected={form.type} onSelect={t => { setForm(p => ({ ...p, type: t })); go(1); }} />}
-            {step === 1 && <StepDetails   form={form} setForm={setForm} onBack={() => go(0)} onNext={() => go(2)} />}
-            {step === 2 && <StepContact   form={form} setForm={setForm} onBack={() => go(1)} onSubmit={handleSubmit} submitting={submitting} />}
-            {step === 3 && <StepSuccess   email={form.email} ticketId={ticketId} onReset={() => { setForm(INITIAL_FORM); setTicketId(null); go(0); }} />}
+      {/* ================================================================ */}
+      {/* STEP CONTENT                                                     */}
+      {/* ================================================================ */}
+
+      <div className="min-w-0 p-5 sm:p-8 lg:p-9">
+
+        <AnimatePresence
+          mode="wait"
+          custom={direction}
+        >
+          <motion.div
+            key={step}
+            custom={direction}
+            variants={stepVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{
+              duration: 0.22,
+              ease: "easeOut",
+            }}
+          >
+
+            {step === 0 && (
+              <StepCategory
+                selected={form.type}
+                onSelect={(type) => updateField("type", type)}
+                onContinue={() => {
+                  if (!form.type) {
+                    toast.error("Please choose a support category.");
+                    return;
+                  }
+
+                  goToStep(1);
+                }}
+              />
+            )}
+
+            {step === 1 && (
+              <StepDetails
+                form={form}
+                setForm={setForm}
+                onBack={() => goToStep(0)}
+                onNext={() => {
+                  if (validateDetails()) {
+                    goToStep(2);
+                  }
+                }}
+              />
+            )}
+
+            {step === 2 && (
+              <StepContact
+                form={form}
+                setForm={setForm}
+                onBack={() => goToStep(1)}
+                onSubmit={handleSubmit}
+                submitting={submitting}
+                submitError={submitError}
+              />
+            )}
+
+            {step === 3 && (
+              <StepSuccess
+                email={form.email}
+                ticketId={ticketId}
+                onReset={resetWizard}
+              />
+            )}
+
           </motion.div>
         </AnimatePresence>
       </div>
+
     </div>
   );
 };
 
-// ─── Step 0: Category ─────────────────────────────────────────────
-const StepCategory: React.FC<{ selected: TicketType | ''; onSelect: (t: TicketType) => void }> = ({ selected, onSelect }) => (
-  <div>
-    <h3 className="text-[22px] font-bold text-[#141413] mb-1.5">What do you need help with?</h3>
-    <p className="text-[14px] text-[#87867f] mb-7">Click the category that best matches your issue — we'll ask the right follow-up questions.</p>
-    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-      {TICKET_CATEGORIES.map(cat => (
-        <motion.button
-          key={cat.value}
-          onClick={() => onSelect(cat.value)}
-          whileHover={{ y: -2 }}
-          whileTap={{ scale: 0.97 }}
-          transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-          className={`flex items-center gap-3 p-4 rounded-xl border-2 text-left transition-all group ${
-            selected === cat.value
-              ? 'border-[#141413] bg-[#141413]'
-              : 'border-[#e8e6dc] bg-white hover:border-[#141413]/40 hover:shadow-sm'
-          }`}
-        >
-          <div className={`h-9 w-9 rounded-xl flex items-center justify-center shrink-0 ${selected === cat.value ? 'bg-white/15' : cat.bg}`}>
-            <cat.icon className={`h-4.5 w-4.5 h-[18px] w-[18px] ${selected === cat.value ? 'text-white' : cat.color}`} strokeWidth={1.75} />
-          </div>
-          <div className="min-w-0">
-            <p className={`text-[13px] font-bold leading-tight ${selected === cat.value ? 'text-white' : 'text-[#141413]'}`}>{cat.label}</p>
-            <p className={`text-[11px] mt-0.5 leading-snug ${selected === cat.value ? 'text-white/55' : 'text-[#87867f]'}`}>{cat.desc}</p>
-          </div>
-        </motion.button>
-      ))}
-    </div>
-  </div>
-);
+/* -------------------------------------------------------------------------- */
+/* Step 1 — Category                                                         */
+/* -------------------------------------------------------------------------- */
 
-// ─── Step 1: Issue Details ────────────────────────────────────────
-const StepDetails: React.FC<{ form: FormState; setForm: React.Dispatch<React.SetStateAction<FormState>>; onBack: () => void; onNext: () => void }> = ({ form, setForm, onBack, onNext }) => {
-  const cat = TICKET_CATEGORIES.find(c => c.value === form.type);
-  const canContinue = form.subject.trim().length >= 5 && form.description.trim().length >= 15;
+function StepCategory({
+  selected,
+  onSelect,
+  onContinue,
+}: {
+  selected: TicketType | "";
+  onSelect: (value: TicketType) => void;
+  onContinue: () => void;
+}) {
+  return (
+    <div>
+      <div className="mb-7">
+        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#c96442]">
+          Step 01
+        </p>
+
+        <h3 className="mt-3 font-serif text-[25px] font-medium tracking-[-0.02em] text-[#171715] sm:text-[29px]">
+          What can we help you with?
+        </h3>
+
+        <p className="mt-3 max-w-[550px] text-[12px] leading-[1.8] text-[#858279] sm:text-[13px]">
+          Select the topic closest to your issue. We'll use
+          your selection to organize your support request.
+        </p>
+      </div>
+
+      <div
+        role="radiogroup"
+        aria-label="Support category"
+        className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+      >
+        {CATEGORIES.map((category) => {
+          const Icon = category.icon;
+          const active = selected === category.value;
+
+          return (
+            <button
+              key={category.value}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              onClick={() => onSelect(category.value)}
+              className={`group flex min-h-[82px] items-center gap-3 border p-4 text-left transition-all duration-200 ${
+                active
+                  ? "border-[#171715] bg-[#171715] shadow-[0_3px_12px_rgba(0,0,0,0.08)]"
+                  : "border-[#e8e6dc] bg-white hover:border-[#c96442]/60 hover:bg-[#faf9f5]"
+              }`}
+            >
+              <div
+                className={`flex h-10 w-10 shrink-0 items-center justify-center transition-colors ${
+                  active
+                    ? "bg-white/10"
+                    : category.background
+                }`}
+              >
+                <Icon
+                  className={`h-[18px] w-[18px] ${
+                    active ? "text-[#e0a084]" : category.color
+                  }`}
+                  strokeWidth={1.8}
+                />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <p
+                  className={`text-[12px] font-semibold ${
+                    active ? "text-white" : "text-[#292822]"
+                  }`}
+                >
+                  {category.label}
+                </p>
+
+                <p
+                  className={`mt-1 text-[10px] leading-[1.6] ${
+                    active ? "text-white/55" : "text-[#89867d]"
+                  }`}
+                >
+                  {category.description}
+                </p>
+              </div>
+
+              <div
+                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors ${
+                  active
+                    ? "border-[#c96442] bg-[#c96442] text-white"
+                    : "border-[#dedbd2] text-transparent"
+                }`}
+              >
+                <Check className="h-3 w-3" />
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-8 flex flex-col gap-4 border-t border-[#eeeae2] pt-6 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-[10px] text-[#89867d]">
+          Choose one category to continue.
+        </p>
+
+        <button
+          type="button"
+          onClick={onContinue}
+          disabled={!selected}
+          className="inline-flex min-h-11 items-center justify-center gap-2 bg-[#171715] px-6 text-[11px] font-semibold text-white transition-colors hover:bg-[#30302e] disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Continue
+          <ArrowRight className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Step 2 — Details                                                          */
+/* -------------------------------------------------------------------------- */
+
+function FormLabel({
+  children,
+  required = false,
+}: {
+  children: React.ReactNode;
+  required?: boolean;
+}) {
+  return (
+    <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.13em] text-[#6d6a62]">
+      {children}
+
+      {required && (
+        <span className="ml-1 text-[#c96442]">*</span>
+      )}
+    </label>
+  );
+}
+
+const inputClass =
+  "h-11 w-full border border-[#e5e2d9] bg-[#faf9f5] px-3.5 text-[12px] text-[#24231f] outline-none transition-colors placeholder:text-[#a09c92] focus:border-[#c96442] focus:bg-white";
+
+const textareaClass =
+  "w-full resize-y border border-[#e5e2d9] bg-[#faf9f5] px-3.5 py-3 text-[12px] leading-[1.8] text-[#24231f] outline-none transition-colors placeholder:text-[#a09c92] focus:border-[#c96442] focus:bg-white";
+
+function StepDetails({
+  form,
+  setForm,
+  onBack,
+  onNext,
+}: {
+  form: FormState;
+  setForm: Dispatch<SetStateAction<FormState>>;
+  onBack: () => void;
+  onNext: () => void;
+}) {
+  const category = getCategory(form.type);
+  const Icon = category?.icon;
 
   return (
-    <div className="space-y-5">
-      {/* Selected category badge */}
-      {cat && (
-        <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border ${cat.bg} border-current/20`}>
-          <cat.icon className={`h-4 w-4 ${cat.color}`} strokeWidth={1.75} />
-          <span className={`text-[12px] font-bold ${cat.color}`}>{cat.label}</span>
+    <div>
+      <div className="mb-7">
+        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#c96442]">
+          Step 02
+        </p>
+
+        <h3 className="mt-3 font-serif text-[25px] font-medium text-[#171715] sm:text-[29px]">
+          Tell us what happened.
+        </h3>
+
+        <p className="mt-3 text-[12px] leading-[1.8] text-[#858279] sm:text-[13px]">
+          Include enough detail so the support team can
+          understand and investigate your request.
+        </p>
+      </div>
+
+      {category && Icon && (
+        <div className="mb-7 flex items-center justify-between gap-3 border border-[#e8e6dc] bg-[#faf9f5] p-3.5">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className={`flex h-9 w-9 shrink-0 items-center justify-center ${category.background}`}>
+              <Icon className={`h-4 w-4 ${category.color}`} />
+            </div>
+
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold text-[#292822]">
+                {category.label}
+              </p>
+
+              <p className="text-[10px] text-[#89867d]">
+                Selected category
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onBack}
+            className="shrink-0 text-[10px] font-semibold text-[#c96442] hover:text-[#a94f31]"
+          >
+            Change
+          </button>
         </div>
       )}
 
-      <div>
-        <h3 className="text-[22px] font-bold text-[#141413] mb-1">Describe the issue</h3>
-        <p className="text-[14px] text-[#87867f]">The more detail you provide, the faster we can resolve it.</p>
-      </div>
+      <div className="space-y-6">
 
-      <div>
-        <label className="block text-[11px] font-bold uppercase tracking-wider text-[#87867f] mb-2">
-          Subject <span className="text-[#c96442]">*</span>
-        </label>
-        <input
-          type="text"
-          value={form.subject}
-          onChange={e => setForm(p => ({ ...p, subject: e.target.value }))}
-          placeholder={cat?.value === 'bug_report' ? 'e.g. Dashboard crashes on mobile Safari' : 'Brief summary of your issue'}
-          className="w-full bg-[#faf9f5] border-2 border-[#e8e6dc] text-[#141413] placeholder-[#b0aea5] px-4 py-3 rounded-xl text-[14px] outline-none focus:border-[#141413] focus:bg-white transition-all"
-        />
-      </div>
+        {/* Subject */}
+        <div>
+          <FormLabel required>Subject</FormLabel>
 
-      <div>
-        <label className="block text-[11px] font-bold uppercase tracking-wider text-[#87867f] mb-2">
-          Full Description <span className="text-[#c96442]">*</span>
-        </label>
-        <textarea
-          value={form.description}
-          onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
-          placeholder={
-            cat?.value === 'bug_report'
-              ? '1. What you were doing\n2. What happened\n3. What you expected to happen\n4. Steps to reproduce'
-              : cat?.value === 'technical'
-              ? 'Describe the error, any error messages shown, and the steps to reproduce...'
-              : 'Tell us what happened and what help you need...'
-          }
-          rows={7}
-          className="w-full bg-[#faf9f5] border-2 border-[#e8e6dc] text-[#141413] placeholder-[#b0aea5] px-4 py-3 rounded-xl text-[14px] outline-none focus:border-[#141413] focus:bg-white transition-all resize-none leading-relaxed"
-        />
-        <div className="flex justify-between mt-1.5">
-          <span className="text-[11px] text-[#b0aea5]">Min. 15 characters</span>
-          <span className={`text-[11px] font-medium transition-colors ${form.description.length >= 15 ? 'text-emerald-500' : 'text-[#b0aea5]'}`}>
-            {form.description.length} / 2000
-          </span>
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-[11px] font-bold uppercase tracking-wider text-[#87867f] mb-2">
-          Page URL <span className="text-[#87867f] font-normal normal-case tracking-normal">(optional — helps us reproduce faster)</span>
-        </label>
-        <div className="relative">
-          <Link2 className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#b0aea5]" />
           <input
-            type="url"
-            value={form.pageUrl}
-            onChange={e => setForm(p => ({ ...p, pageUrl: e.target.value }))}
-            placeholder="https://seohub.com/report/..."
-            className="w-full bg-[#faf9f5] border-2 border-[#e8e6dc] text-[#141413] placeholder-[#b0aea5] pl-10 pr-4 py-3 rounded-xl text-[14px] outline-none focus:border-[#141413] focus:bg-white transition-all"
+            type="text"
+            value={form.subject}
+            maxLength={120}
+            onChange={(event) =>
+              updateFormField(setForm, "subject", event.target.value)
+            }
+            placeholder={
+              form.type === "bug_report"
+                ? "e.g. Dashboard is not loading on mobile"
+                : "Briefly describe your issue"
+            }
+            className={inputClass}
           />
-        </div>
-      </div>
 
-      <div>
-        <label className="block text-[11px] font-bold uppercase tracking-wider text-[#87867f] mb-2.5">Priority</label>
-        <div className="flex gap-2 flex-wrap">
-          {(Object.entries(PRIORITY_CFG) as [TicketPriority, { label: string; ring: string }][]).map(([key, cfg]) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setForm(p => ({ ...p, priority: key }))}
-              className={`px-4 py-2 rounded-xl border-2 text-[13px] font-bold transition-all ${
-                form.priority === key
-                  ? cfg.ring
-                  : 'border-[#e8e6dc] text-[#b0aea5] bg-white hover:border-[#141413]/30 hover:text-[#141413]'
+          <p className="mt-1.5 text-right text-[9px] text-[#9c988e]">
+            {form.subject.length}/120
+          </p>
+        </div>
+
+        {/* Description */}
+        <div>
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <FormLabel required>Describe your issue</FormLabel>
+
+            <span className="text-[9px] text-[#a09c92]">
+              15–2,000 characters
+            </span>
+          </div>
+
+          <textarea
+            value={form.description}
+            maxLength={2000}
+            rows={6}
+            onChange={(event) =>
+              updateFormField(
+                setForm,
+                "description",
+                event.target.value
+              )
+            }
+            placeholder={
+              form.type === "bug_report"
+                ? "What were you doing when the problem occurred? What happened? What did you expect to happen?"
+                : form.type === "scan_failure"
+                  ? "Which website were you scanning? What happened during the scan? Was there an error message?"
+                  : "Explain what happened, what you expected, and any relevant details that could help us."
+            }
+            className={textareaClass}
+          />
+
+          <div className="mt-2 flex items-center justify-between gap-3">
+            <p
+              className={`text-[10px] ${
+                form.description.trim().length >= 15
+                  ? "text-emerald-700"
+                  : "text-[#99958a]"
               }`}
             >
-              {cfg.label}
-            </button>
-          ))}
+              {form.description.trim().length >= 15
+                ? "Description looks good"
+                : "A little more detail will help us."}
+            </p>
+
+            <span className="text-[10px] tabular-nums text-[#99958a]">
+              {form.description.length}/2000
+            </span>
+          </div>
         </div>
+
+        {/* Optional page URL */}
+        <div>
+          <FormLabel>
+            Related page URL{" "}
+            <span className="ml-1 font-normal normal-case tracking-normal text-[#99958a]">
+              (optional)
+            </span>
+          </FormLabel>
+
+          <div className="relative">
+            <Link2 className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#99958a]" />
+
+            <input
+              type="url"
+              value={form.pageUrl}
+              onChange={(event) =>
+                updateFormField(setForm, "pageUrl", event.target.value)
+              }
+              placeholder="https://example.com/report"
+              className={`${inputClass} pl-10`}
+            />
+          </div>
+
+          <p className="mt-1.5 text-[10px] leading-[1.6] text-[#99958a]">
+            Add the page where you experienced the problem.
+          </p>
+        </div>
+
+        {/* Priority */}
+        <div>
+          <FormLabel>How important is this?</FormLabel>
+
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {PRIORITIES.map((priority) => {
+              const active = form.priority === priority.value;
+
+              return (
+                <button
+                  key={priority.value}
+                  type="button"
+                  onClick={() =>
+                    updateFormField(
+                      setForm,
+                      "priority",
+                      priority.value
+                    )
+                  }
+                  aria-pressed={active}
+                  className={`flex min-h-[65px] flex-col items-start justify-center border px-3 py-2 text-left transition-colors ${
+                    active
+                      ? priority.activeStyle
+                      : `${priority.style} bg-white hover:bg-[#faf9f5]`
+                  }`}
+                >
+                  <span className="text-[11px] font-semibold">
+                    {priority.label}
+                  </span>
+
+                  <span className="mt-1 text-[9px] opacity-75">
+                    {priority.description}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <p className="mt-2 text-[10px] leading-relaxed text-[#99958a]">
+            Choose urgent only when a critical issue is disrupting
+            your ability to use the platform.
+          </p>
+        </div>
+
       </div>
 
-      <div className="flex gap-3 pt-2">
-        <button onClick={onBack} className="flex items-center gap-2 px-5 py-3 rounded-xl border-2 border-[#e8e6dc] text-[14px] font-semibold text-[#87867f] hover:border-[#141413] hover:text-[#141413] transition-all">
-          <ChevronLeft className="h-4 w-4" /> Back
-        </button>
-        <motion.button
-          onClick={() => {
-            if (!canContinue) {
-              if (form.subject.trim().length < 5) toast.error("Subject must be at least 5 characters.");
-              else if (form.description.trim().length < 15) toast.error("Description must be at least 15 characters.");
-              return;
-            }
-            onNext();
-          }}
-          whileHover={canContinue ? { scale: 1.01 } : {}}
-          whileTap={canContinue ? { scale: 0.98 } : {}}
-          className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-[14px] font-semibold transition-all ${
-            canContinue 
-              ? 'bg-[#141413] text-white' 
-              : 'bg-[#e8e6dc] text-[#87867f] opacity-70 cursor-not-allowed'
-          }`}
+      {/* Navigation */}
+      <div className="mt-8 flex flex-col-reverse gap-3 border-t border-[#eeeae2] pt-6 sm:flex-row sm:items-center sm:justify-between">
+
+        <button
+          type="button"
+          onClick={onBack}
+          className="inline-flex min-h-11 items-center justify-center gap-2 border border-[#e5e2d9] px-5 text-[11px] font-semibold text-[#555148] transition-colors hover:bg-[#f7f5ef]"
         >
-          Continue <ChevronRight className="h-4 w-4" />
-        </motion.button>
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back
+        </button>
+
+        <button
+          type="button"
+          onClick={onNext}
+          className="inline-flex min-h-11 items-center justify-center gap-2 bg-[#171715] px-6 text-[11px] font-semibold text-white transition-colors hover:bg-[#30302e]"
+        >
+          Continue to contact
+          <ArrowRight className="h-3.5 w-3.5" />
+        </button>
       </div>
     </div>
   );
-};
+}
 
-// ─── Step 2: Contact Info ─────────────────────────────────────────
-const StepContact: React.FC<{
+/* -------------------------------------------------------------------------- */
+/* Step 3 — Contact and Review                                                */
+/* -------------------------------------------------------------------------- */
+
+function StepContact({
+  form,
+  setForm,
+  onBack,
+  onSubmit,
+  submitting,
+  submitError,
+}: {
   form: FormState;
-  setForm: React.Dispatch<React.SetStateAction<FormState>>;
+  setForm: Dispatch<SetStateAction<FormState>>;
   onBack: () => void;
-  onSubmit: () => void;
+  onSubmit: (event?: FormEvent) => Promise<void>;
   submitting: boolean;
-}> = ({ form, setForm, onBack, onSubmit, submitting }) => {
-  const canSubmit = form.name.trim().length >= 2 && form.email.includes('@') && form.email.includes('.');
+  submitError: string;
+}) {
+  const category = getCategory(form.type);
+  const Icon = category?.icon;
 
-  const cat = TICKET_CATEGORIES.find(c => c.value === form.type);
+  const isValid =
+    form.name.trim().length >= 2 &&
+    EMAIL_PATTERN.test(form.email.trim());
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h3 className="text-[22px] font-bold text-[#141413] mb-1">Your contact details</h3>
-        <p className="text-[14px] text-[#87867f]">We'll reply to this email within 24 hours.</p>
+    <form onSubmit={(event) => void onSubmit(event)}>
+      <div className="mb-7">
+        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#c96442]">
+          Step 03
+        </p>
+
+        <h3 className="mt-3 font-serif text-[25px] font-medium text-[#171715] sm:text-[29px]">
+          Where should we reach you?
+        </h3>
+
+        <p className="mt-3 text-[12px] leading-[1.8] text-[#858279] sm:text-[13px]">
+          Provide your contact details and review your request
+          before submitting.
+        </p>
       </div>
 
-      {/* Ticket summary */}
-      <div className="bg-[#faf9f5] border border-[#e8e6dc] rounded-xl px-5 py-4 space-y-2">
-        <p className="text-[11px] font-bold text-[#87867f] uppercase tracking-wider mb-2">Your ticket</p>
-        <div className="flex items-start gap-3">
-          {cat && (
-            <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${cat.bg}`}>
-              <cat.icon className={`h-4 w-4 ${cat.color}`} strokeWidth={1.75} />
+      {/* Request summary */}
+      <div className="mb-7 border border-[#e8e6dc] bg-[#faf9f5] p-4 sm:p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-start gap-3">
+            {category && Icon && (
+              <div className={`flex h-9 w-9 shrink-0 items-center justify-center ${category.background}`}>
+                <Icon className={`h-4 w-4 ${category.color}`} />
+              </div>
+            )}
+
+            <div className="min-w-0">
+              <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-[#99958a]">
+                Your request
+              </p>
+
+              <h4 className="mt-1 break-words text-[13px] font-semibold text-[#24231f]">
+                {form.subject}
+              </h4>
+
+              <p className="mt-1 text-[10px] text-[#89867d]">
+                {category?.label} · {form.priority} priority
+              </p>
             </div>
-          )}
-          <div className="min-w-0">
-            <p className="text-[14px] font-bold text-[#141413] truncate">{form.subject}</p>
-            <p className="text-[12px] text-[#87867f] mt-0.5">{cat?.label} · {PRIORITY_CFG[form.priority].label} priority</p>
           </div>
+
+          <button
+            type="button"
+            onClick={onBack}
+            className="shrink-0 text-[10px] font-semibold text-[#c96442] hover:text-[#a94f31]"
+          >
+            Edit
+          </button>
         </div>
-        {form.description && (
-          <p className="text-[12px] text-[#87867f] line-clamp-2 leading-relaxed border-t border-[#e8e6dc] pt-2 mt-2">
+
+        <div className="mt-4 border-t border-[#e5e2d9] pt-3">
+          <p className="whitespace-pre-wrap break-words text-[11px] leading-[1.8] text-[#77746c] line-clamp-4">
             {form.description}
+          </p>
+        </div>
+
+        {form.pageUrl && (
+          <p className="mt-3 break-all text-[10px] text-[#89867d]">
+            Related page: {form.pageUrl}
           </p>
         )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* Contact fields */}
+      <div className="space-y-5">
+
         <div>
-          <label className="block text-[11px] font-bold uppercase tracking-wider text-[#87867f] mb-2">
-            Full Name <span className="text-[#c96442]">*</span>
-          </label>
+          <FormLabel required>Full name</FormLabel>
+
           <input
             type="text"
             value={form.name}
-            onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
-            placeholder="Jane Smith"
             autoComplete="name"
-            className="w-full bg-[#faf9f5] border-2 border-[#e8e6dc] text-[#141413] placeholder-[#b0aea5] px-4 py-3 rounded-xl text-[14px] outline-none focus:border-[#141413] focus:bg-white transition-all"
+            maxLength={100}
+            onChange={(event) =>
+              updateFormField(setForm, "name", event.target.value)
+            }
+            placeholder="Your full name"
+            className={inputClass}
+            required
           />
         </div>
+
         <div>
-          <label className="block text-[11px] font-bold uppercase tracking-wider text-[#87867f] mb-2">
-            Email Address <span className="text-[#c96442]">*</span>
-          </label>
+          <FormLabel required>Email address</FormLabel>
+
           <input
             type="email"
             value={form.email}
-            onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
-            placeholder="jane@company.com"
             autoComplete="email"
-            className="w-full bg-[#faf9f5] border-2 border-[#e8e6dc] text-[#141413] placeholder-[#b0aea5] px-4 py-3 rounded-xl text-[14px] outline-none focus:border-[#141413] focus:bg-white transition-all"
+            inputMode="email"
+            maxLength={254}
+            onChange={(event) =>
+              updateFormField(setForm, "email", event.target.value)
+            }
+            placeholder="you@company.com"
+            className={inputClass}
+            required
           />
+
+          <p className="mt-2 text-[10px] text-[#99958a]">
+            We'll use this email address to respond to your request.
+          </p>
         </div>
+
       </div>
 
-      <div className="flex gap-3 pt-2">
-        <button onClick={onBack} className="flex items-center gap-2 px-5 py-3 rounded-xl border-2 border-[#e8e6dc] text-[14px] font-semibold text-[#87867f] hover:border-[#141413] hover:text-[#141413] transition-all">
-          <ChevronLeft className="h-4 w-4" /> Back
-        </button>
-        <motion.button
-          onClick={onSubmit}
-          disabled={!canSubmit || submitting}
-          whileHover={canSubmit && !submitting ? { scale: 1.01 } : {}}
-          whileTap={canSubmit && !submitting ? { scale: 0.98 } : {}}
-          className="flex-1 flex items-center justify-center gap-2.5 bg-[#c96442] hover:bg-[#b05638] text-white px-6 py-3 rounded-xl text-[14px] font-semibold disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-[0_4px_24px_rgba(201,100,66,0.25)]"
+      {submitError && (
+        <div
+          role="alert"
+          className="mt-5 flex items-start gap-3 border border-[#f0d2ca] bg-[#fff5f1] p-4"
         >
-          {submitting
-            ? <><Loader2 className="h-4 w-4 animate-spin" /> Submitting…</>
-            : <><Send className="h-4 w-4" /> Send Ticket</>
-          }
-        </motion.button>
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#c96442]" />
+
+          <div>
+            <p className="text-[11px] font-semibold text-[#9d4c35]">
+              Submission failed
+            </p>
+
+            <p className="mt-1 break-words text-[10px] leading-[1.7] text-[#8a6457]">
+              {submitError}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Consent / privacy */}
+      <div className="mt-6 border-t border-[#eeeae2] pt-5">
+        <p className="text-[10px] leading-[1.8] text-[#89867d]">
+          By submitting this request, you acknowledge that the
+          information provided will be used to handle your support
+          request in accordance with our{" "}
+          <Link
+            to="/privacy"
+            target="_blank"
+            rel="noreferrer"
+            className="font-semibold text-[#c96442] underline underline-offset-2 hover:text-[#a94f31]"
+          >
+            Privacy Policy
+          </Link>
+          .
+        </p>
       </div>
 
-      <p className="text-[11px] text-[#b0aea5] text-center">
-        By submitting you agree to our{' '}
-        <a href="/privacy" className="underline hover:text-[#87867f] transition-colors">Privacy Policy</a>.
-        {' '}We automatically collect your browser info to help resolve the issue faster.
-      </p>
-    </div>
+      {/* Actions */}
+      <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+
+        <button
+          type="button"
+          onClick={onBack}
+          disabled={submitting}
+          className="inline-flex min-h-11 items-center justify-center gap-2 border border-[#e5e2d9] px-5 text-[11px] font-semibold text-[#555148] transition-colors hover:bg-[#f7f5ef] disabled:opacity-50"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back
+        </button>
+
+        <button
+          type="submit"
+          disabled={!isValid || submitting}
+          className="inline-flex min-h-12 items-center justify-center gap-2 bg-[#c96442] px-6 text-[11px] font-semibold text-white shadow-[0_5px_18px_rgba(201,100,66,0.18)] transition-colors hover:bg-[#b25538] disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {submitting ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Submitting request...
+            </>
+          ) : (
+            <>
+              <Send className="h-3.5 w-3.5" />
+              Submit support request
+            </>
+          )}
+        </button>
+      </div>
+    </form>
   );
-};
+}
 
-// ─── Step 3: Success ──────────────────────────────────────────────
-const StepSuccess: React.FC<{ email: string; ticketId: string | null; onReset: () => void }> = ({ email, ticketId, onReset }) => (
-  <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3 }}
-    className="text-center py-10">
-    <motion.div
-      initial={{ scale: 0 }} animate={{ scale: 1 }}
-      transition={{ type: 'spring', stiffness: 260, damping: 20, delay: 0.1 }}
-      className="mx-auto mb-7 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-50 border-2 border-emerald-200"
-    >
-      <CheckCircle2 className="h-10 w-10 text-emerald-500" strokeWidth={1.5} />
-    </motion.div>
+/* -------------------------------------------------------------------------- */
+/* Step 4 — Success                                                           */
+/* -------------------------------------------------------------------------- */
 
-    <h3 className="text-[28px] font-serif font-medium text-[#141413] mb-3">Ticket submitted!</h3>
-    <p className="text-[15px] text-[#87867f] max-w-sm mx-auto leading-relaxed mb-2">
-      We've received your message and will reply to <span className="font-bold text-[#141413]">{email}</span> within 24 hours.
-    </p>
-    {ticketId && (
-      <p className="text-[12px] font-mono text-[#b0aea5] mb-1 bg-[#f5f4ed] inline-block px-3 py-1 rounded-lg">
-        Ticket ID: {ticketId.slice(0, 8).toUpperCase()}
-      </p>
-    )}
-    <p className="text-[13px] text-[#b0aea5] mt-3 mb-10">Keep this ID handy if you need to follow up.</p>
+function StepSuccess({
+  email,
+  ticketId,
+  onReset,
+}: {
+  email: string;
+  ticketId: string | null;
+  onReset: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
 
-    <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-      <button onClick={onReset}
-        className="px-6 py-3 rounded-xl border-2 border-[#e8e6dc] text-[14px] font-semibold text-[#141413] hover:bg-[#f5f4ed] transition-all">
-        Submit another ticket
-      </button>
-      <Link to="/"
-        className="px-6 py-3 rounded-xl bg-[#141413] text-white text-[14px] font-semibold hover:bg-[#2a2926] transition-all flex items-center gap-2">
-        Back to Home <ArrowRight className="h-4 w-4" />
-      </Link>
-    </div>
-  </motion.div>
-);
+  const copyTicketId = async () => {
+    if (!ticketId) return;
 
-// ─── FAQ Accordion ────────────────────────────────────────────────
-const FaqAccordion: React.FC = () => {
-  const [open, setOpen] = useState<number | null>(null);
+    try {
+      await navigator.clipboard.writeText(ticketId);
+
+      setCopied(true);
+
+      toast.success("Ticket ID copied.");
+    } catch (error) {
+      console.error("Could not copy ticket ID:", error);
+
+      toast.error("Unable to copy the ticket ID.");
+    }
+  };
+
   return (
-    <div className="divide-y divide-[#e8e6dc]">
-      {FAQ_ITEMS.map((item, i) => (
-        <div key={i} className="py-4">
-          <button onClick={() => setOpen(open === i ? null : i)}
-            className="w-full flex items-start justify-between gap-3 text-left">
-            <span className="text-[14px] font-semibold text-[#141413] leading-snug">{item.q}</span>
-            <span className="shrink-0 mt-0.5">
-              {open === i ? <ChevronUp className="h-4 w-4 text-[#87867f]" /> : <ChevronDown className="h-4 w-4 text-[#87867f]" />}
-            </span>
-          </button>
-          <AnimatePresence>
-            {open === i && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}
-                className="overflow-hidden">
-                <p className="pt-3 text-[13px] leading-[1.75] text-[#87867f]">{item.a}</p>
-              </motion.div>
-            )}
-          </AnimatePresence>
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="py-6 text-center sm:py-10"
+    >
+      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50">
+        <CheckCircle2
+          className="h-8 w-8 text-emerald-700"
+          strokeWidth={1.6}
+        />
+      </div>
+
+      <p className="mt-7 text-[10px] font-bold uppercase tracking-[0.18em] text-[#c96442]">
+        Request received
+      </p>
+
+      <h3 className="mt-3 font-serif text-[30px] font-medium tracking-[-0.025em] text-[#171715] sm:text-[35px]">
+        Thank you for reaching out.
+      </h3>
+
+      <p className="mx-auto mt-4 max-w-[440px] text-[12px] leading-[1.9] text-[#77746c] sm:text-[13px]">
+        Your support request has been submitted. We will use
+        the following email address to contact you:
+      </p>
+
+      <div className="mx-auto mt-5 inline-flex max-w-full items-center gap-2 border border-[#e8e6dc] bg-[#faf9f5] px-4 py-3">
+        <MessageCircle className="h-4 w-4 shrink-0 text-[#c96442]" />
+
+        <span className="break-all text-[12px] font-semibold text-[#292822]">
+          {email}
+        </span>
+      </div>
+
+      {ticketId && (
+        <div className="mx-auto mt-6 max-w-sm border border-[#e8e6dc] bg-white p-4">
+          <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-[#99958a]">
+            Ticket reference
+          </p>
+
+          <div className="mt-2 flex items-center justify-center gap-3">
+            <code className="break-all text-[12px] font-semibold text-[#24231f]">
+              {ticketId}
+            </code>
+
+            <button
+              type="button"
+              onClick={() => void copyTicketId()}
+              aria-label="Copy ticket reference"
+              className="shrink-0 text-[#89867d] transition-colors hover:text-[#c96442]"
+            >
+              {copied ? (
+                <Check className="h-4 w-4 text-emerald-700" />
+              ) : (
+                <MessageSquare className="h-4 w-4" />
+              )}
+            </button>
+          </div>
         </div>
-      ))}
-    </div>
+      )}
+
+      <div className="mx-auto mt-8 max-w-[380px] border-t border-[#e8e6dc] pt-6">
+        <p className="text-[11px] leading-[1.8] text-[#89867d]">
+          Keep your ticket reference if one was provided. You can
+          use it when following up about this request.
+        </p>
+      </div>
+
+      <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+        <button
+          type="button"
+          onClick={onReset}
+          className="inline-flex min-h-11 items-center justify-center gap-2 border border-[#e2dfd6] px-5 text-[11px] font-semibold text-[#555148] transition-colors hover:bg-[#f7f5ef]"
+        >
+          Submit another request
+        </button>
+
+        <Link
+          to="/"
+          className="inline-flex min-h-11 items-center justify-center gap-2 bg-[#171715] px-5 text-[11px] font-semibold text-white transition-colors hover:bg-[#30302e]"
+        >
+          Back to homepage
+          <ArrowRight className="h-3.5 w-3.5" />
+        </Link>
+      </div>
+    </motion.div>
   );
-};
+}
 
 export default Support;

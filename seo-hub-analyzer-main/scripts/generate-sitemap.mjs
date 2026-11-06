@@ -19,6 +19,10 @@ import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 import { createClient } from "@supabase/supabase-js";
 import { loadEnv } from "vite";
+import {
+  fetchPublishedBlogRoutes,
+  STATIC_ROUTES,
+} from "../netlify/functions/sitemap-data.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = resolve(__dirname, "..");
@@ -36,64 +40,15 @@ const BASE_URL = (deployUrl || "http://localhost:8080").replace(/\/$/, "");
 const SUPABASE_URL = env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = env.VITE_SUPABASE_ANON_KEY;
 
-// ─── Static Route Table ────────────────────────────────────────
-const staticRoutes = [
-  // Homepage — highest priority
-  { path: "/",               changefreq: "weekly",  priority: 1.0 },
-
-  // Platform & Core
-  { path: "/overview",       changefreq: "monthly", priority: 0.9 },
-  { path: "/capabilities",   changefreq: "monthly", priority: 0.9 },
-  { path: "/workflow",       changefreq: "monthly", priority: 0.8 },
-  { path: "/pricing",        changefreq: "monthly", priority: 0.8 },
-  { path: "/about",          changefreq: "monthly", priority: 0.7 },
-
-  // Resources
-  { path: "/docs",           changefreq: "weekly",  priority: 0.8 },
-  { path: "/api-reference",  changefreq: "monthly", priority: 0.7 },
-  { path: "/case-studies",   changefreq: "monthly", priority: 0.8 },
-  { path: "/sample-report",  changefreq: "monthly", priority: 0.8 },
-  { path: "/blog",           changefreq: "weekly",  priority: 0.8 },
-  { path: "/support",        changefreq: "monthly", priority: 0.6 },
-
-  // Legal
-  { path: "/privacy",        changefreq: "yearly",  priority: 0.3 },
-  { path: "/terms",          changefreq: "yearly",  priority: 0.3 },
-];
-
 // ─── Fetch dynamic blog URLs ───────────────────────────────────
 async function fetchBlogRoutes() {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    console.warn("⚠️  Supabase env vars missing — skipping dynamic blog URLs.");
+    console.warn("⚠️  Supabase env vars missing — generated sitemap will contain static routes only.");
     return [];
   }
 
-  try {
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    const { data, error } = await supabase
-      .from("blogs")
-      .select("slug, published_at, seo_metadata")
-      .eq("status", "published")
-      .lte("published_at", new Date().toISOString())
-      .order("published_at", { ascending: false });
-
-    if (error) {
-      console.warn("⚠️  Supabase query error — skipping blog URLs:", error.message);
-      return [];
-    }
-
-    return (data ?? []).filter((post) => post.seo_metadata?.robots_index !== false).map((post) => ({
-      path: `/blog/${post.slug}`,
-      changefreq: "monthly",
-      priority: 0.7,
-      lastmod: post.published_at
-        ? new Date(post.published_at).toISOString().split("T")[0]
-        : TODAY,
-    }));
-  } catch (err) {
-    console.warn("⚠️  Failed to connect to Supabase — skipping blog URLs:", err.message);
-    return [];
-  }
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  return fetchPublishedBlogRoutes(supabase);
 }
 
 // ─── XML Builder ──────────────────────────────────────────────
@@ -119,7 +74,7 @@ ${entries}
 
 // ─── Main ─────────────────────────────────────────────────────
 const blogRoutes = await fetchBlogRoutes();
-const allRoutes = [...staticRoutes, ...blogRoutes];
+const allRoutes = [...STATIC_ROUTES, ...blogRoutes];
 const xml = buildSitemap(allRoutes);
 mkdirSync(resolve(PROJECT_ROOT, "dist"), { recursive: true });
 writeFileSync(OUTPUT_PATH, xml, "utf8");
@@ -129,4 +84,4 @@ const robots = readFileSync(ROBOTS_SOURCE_PATH, "utf8")
 writeFileSync(ROBOTS_OUTPUT_PATH, `${robots}\n\nSitemap: ${BASE_URL}/sitemap.xml\n`, "utf8");
 
 console.log(`✅ sitemap.xml generated → ${OUTPUT_PATH}`);
-console.log(`   ${staticRoutes.length} static URLs + ${blogRoutes.length} blog URLs = ${allRoutes.length} total | lastmod: ${TODAY}`);
+console.log(`   ${STATIC_ROUTES.length} static URLs + ${blogRoutes.length} blog URLs = ${allRoutes.length} total | lastmod: ${TODAY}`);

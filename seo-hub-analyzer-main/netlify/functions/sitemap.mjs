@@ -13,24 +13,10 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
-
-// Static routes that always appear in the sitemap
-const STATIC_ROUTES = [
-  { path: "/",              changefreq: "weekly",  priority: 1.0 },
-  { path: "/overview",      changefreq: "monthly", priority: 0.9 },
-  { path: "/capabilities",  changefreq: "monthly", priority: 0.9 },
-  { path: "/workflow",      changefreq: "monthly", priority: 0.8 },
-  { path: "/pricing",       changefreq: "monthly", priority: 0.8 },
-  { path: "/about",         changefreq: "monthly", priority: 0.7 },
-  { path: "/docs",          changefreq: "weekly",  priority: 0.8 },
-  { path: "/api-reference", changefreq: "monthly", priority: 0.7 },
-  { path: "/case-studies",  changefreq: "monthly", priority: 0.8 },
-  { path: "/sample-report", changefreq: "monthly", priority: 0.8 },
-  { path: "/blog",          changefreq: "weekly",  priority: 0.8 },
-  { path: "/support",       changefreq: "monthly", priority: 0.6 },
-  { path: "/privacy",       changefreq: "yearly",  priority: 0.3 },
-  { path: "/terms",         changefreq: "yearly",  priority: 0.3 },
-];
+import {
+  fetchPublishedBlogRoutes,
+  STATIC_ROUTES,
+} from "./sitemap-data.mjs";
 
 function buildUrlEntry(baseUrl, { path, changefreq, priority, lastmod }) {
   const today = new Date().toISOString().split("T")[0];
@@ -64,24 +50,22 @@ export const handler = async (event) => {
   if (supabaseUrl && supabaseKey) {
     try {
       const supabase = createClient(supabaseUrl, supabaseKey);
-      const { data } = await supabase
-        .from("blogs")
-        .select("slug, published_at, seo_metadata")
-        .eq("status", "published")
-        .lte("published_at", new Date().toISOString())
-        .order("published_at", { ascending: false });
-
-      blogRoutes = (data ?? []).filter((post) => post.seo_metadata?.robots_index !== false).map((post) => ({
-        path: `/blog/${post.slug}`,
-        changefreq: "monthly",
-        priority: 0.7,
-        lastmod: post.published_at
-          ? new Date(post.published_at).toISOString().split("T")[0]
-          : undefined,
-      }));
+      blogRoutes = await fetchPublishedBlogRoutes(supabase);
     } catch (err) {
-      console.warn("[sitemap] Supabase error — serving static routes only:", err.message);
+      console.error("[sitemap] Could not fetch all published blogs:", err.message);
+      return {
+        statusCode: 502,
+        headers: { "Content-Type": "text/plain; charset=utf-8" },
+        body: "Could not generate a complete sitemap.",
+      };
     }
+  } else {
+    console.error("[sitemap] Supabase environment variables are not configured.");
+    return {
+      statusCode: 500,
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
+      body: "Sitemap source is not configured.",
+    };
   }
 
   // ── 3. Build XML ─────────────────────────────────────────────
